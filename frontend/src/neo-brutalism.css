@@ -1,0 +1,50 @@
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,700,800&f[]=satoshi@500,700&display=swap');
+
+:root {
+  --neo-yellow: var(--blue-40);
+  --neo-charcoal: var(--gray-70);
+  --neo-sage: var(--blue-20);
+  --neo-black: var(--black);
+  --neo-white: var(--white);
+  font-family: "Satoshi", Arial, sans-serif;
+  color: var(--neo-black);
+  background: var(--neo-white);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--neo-white); color: var(--neo-black); font-family: "Satoshi", Arial, sans-serif; }
+h1, h2, h3, h4, h5, h6, .font-display { font-family: "Cabinet Grotesk", Arial Black, sans-serif; font-weight: 800; letter-spacing: -0.035em; }
+
+.neo-page { min-height: calc(100vh - 80px); background: var(--neo-white); }
+.neo-dot-pattern { background-color: var(--neo-yellow); background-image: radial-gradient(rgba(0,0,0,.1) 1.25px, transparent 1.25px); background-size: 32px 32px; }
+.neo-border { border: 2px solid var(--neo-black); }
+.neo-shadow { box-shadow: 4px 4px 0 var(--neo-black); }
+.neo-shadow-lg { box-shadow: 8px 8px 0 var(--neo-black); }
+.neo-card { border: 2px solid var(--neo-black); border-radius: 0; box-shadow: 4px 4px 0 var(--neo-black); background: var(--neo-white); }
+.neo-btn, .neo-page button[type="submit"], .neo-page button:not([class*="rounded-full"]) { border: 2px solid var(--neo-black) !important; border-radius: 8px !important; box-shadow: 4px 4px 0 var(--neo-black); font-weight: 800; transition: transform .15s ease, box-shadow .15s ease; }
+/* Keep controls stationary on hover/click. Moving every button by 4px made the
+   interface appear to jump whenever an interactive element was selected. */
+.neo-btn:hover, .neo-page button[type="submit"]:hover, .neo-page button:not([class*="rounded-full"]):hover { box-shadow: 2px 2px 0 var(--neo-black); }
+.neo-input, .neo-page input:not([type="checkbox"]), .neo-page textarea, .neo-page select { border: 2px solid var(--neo-black) !important; border-radius: 0 !important; box-shadow: 3px 3px 0 var(--neo-black); background: var(--neo-white) !important; color: var(--neo-black) !important; }
+.neo-page input:focus, .neo-page textarea:focus, .neo-page select:focus { outline: 3px solid var(--neo-yellow) !important; outline-offset: 2px; }
+.neo-page .glass-effect, .neo-page [class*="shadow-sm"] { border: 2px solid var(--neo-black) !important; border-radius: 0 !important; box-shadow: 4px 4px 0 var(--neo-black) !important; background: var(--neo-white) !important; }
+.neo-page .bg-\[\#bbd9e8\], .neo-page .bg-\[\#9AC9DE\] { background: var(--blue-60) !important; color: var(--white) !important; }
+.neo-page .hover\:bg-\[\#a8c8d8\]:hover, .neo-page .hover\:bg-\[\#a8c8d7\]:hover { background: var(--blue-70) !important; color: var(--white) !important; }
+.neo-page .bg-\[\#b7c6c2\], .neo-page .bg-\[\#b7c6c2\]\/50 { background: var(--blue-20) !important; color: var(--black) !important; }
+.neo-page .bg-\[\#171e19\], .neo-card.bg-\[\#171e19\] { background: var(--gray-70) !important; }
+.neo-page .text-\[\#64748b\] { color: var(--gray-60) !important; }
+.neo-page .rounded-xl, .neo-page .rounded-2xl { border-radius: 0 !important; }
+.neo-marquee { overflow: hidden; white-space: nowrap; background: var(--neo-charcoal); color: var(--neo-sage); border-block: 2px solid var(--neo-black); }
+.neo-marquee > div { display: inline-block; min-width: 200%; padding: 1rem 0; font-family: "Cabinet Grotesk", sans-serif; font-size: 1.5rem; font-weight: 800; letter-spacing: .08em; animation: neo-marquee 24s linear infinite; }
+.neo-policy { max-width: 56rem; margin: 3rem auto; padding: 2rem; border: 2px solid var(--neo-black); box-shadow: 8px 8px 0 var(--neo-black); background: var(--neo-white); }
+.neo-policy h1 { margin: -2rem -2rem 2rem; padding: 2rem; background: var(--neo-charcoal); color: var(--neo-yellow); font-size: clamp(2.6rem, 6vw, 4.5rem); }
+.neo-policy h2 { margin-top: 2rem; border-left: 8px solid var(--neo-yellow); padding-left: 1rem; font-size: 1.55rem; }
+.neo-policy li { margin: .6rem 0; font-weight: 700; }
+.neo-notes .glass-effect, .neo-premium .rounded-xl, .neo-premium .rounded-2xl, .neo-admin .rounded-lg { border: 2px solid var(--neo-black) !important; border-radius: 0 !important; box-shadow: 4px 4px 0 var(--neo-black) !important; }
+.neo-premium [class*="bg-gradient"], .neo-admin [class*="bg-gray"] { background: var(--neo-yellow) !important; color: var(--neo-black) !important; }
+.neo-admin [class*="bg-yellow"], .neo-admin [class*="bg-white"] { border: 2px solid var(--neo-black) !important; box-shadow: 4px 4px 0 var(--neo-black); }
+@keyframes neo-marquee { to { transform: translateX(-50%); } }
+
+@media (max-width: 768px) {
+  .neo-page { min-height: calc(100vh - 72px); }
+}
