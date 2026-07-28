@@ -11,38 +11,24 @@ const GoogleCallback = () => {
     const token = searchParams.get('token');
     const userData = searchParams.get('user');
 
-    console.log('Received callback data:', { 
-      hasToken: !!token, 
-      hasUserData: !!userData,
-      tokenPreview: token ? token.substring(0, 10) + '...' : null,
-      userDataPreview: userData ? userData.substring(0, 50) + '...' : null
-    });
-
     if (token && userData) {
       try {
-        // Parse user data
         const parsedUserData = JSON.parse(userData);
-        console.log('Parsed user data:', parsedUserData);
         
-        // Store token and user data
+        // Format user data consistently with AuthContext
+        const formattedUserData = {
+          _id: parsedUserData.id || parsedUserData._id,
+          name: parsedUserData.name,
+          email: parsedUserData.email,
+          role: parsedUserData.role,
+          isPremium: parsedUserData.isPremium === undefined ? false : parsedUserData.isPremium,
+          profileImage: parsedUserData.profileImage || ''
+        };
+        
         localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(parsedUserData));
-        
-        // Verify storage
-        const storedToken = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-        console.log('Verified storage:', {
-          hasStoredToken: !!storedToken,
-          hasStoredUser: !!storedUser,
-          storedTokenPreview: storedToken ? storedToken.substring(0, 10) + '...' : null
-        });
-        
-        // Update auth context
-        setUser(parsedUserData);
+        localStorage.setItem('user', JSON.stringify(formattedUserData));
+        setUser(formattedUserData);
         setToken(token);
-        
-        console.log('Authentication successful, redirecting to home...');
-        // Redirect to home page
         navigate('/', { replace: true });
       } catch (error) {
         console.error('Error processing Google callback:', error);
