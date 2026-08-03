@@ -161,7 +161,7 @@ Notflix is a MERN application: React/Vite on the frontend, Express/Node.js on th
 
 1. Copy [`backend/.env.example`](backend/.env.example) and [`frontend/.env.example`](frontend/.env.example) into environment-specific `.env` files. Never commit real credentials.
 2. Set `NODE_ENV=production`, use long random values for `JWT_SECRET` and `SESSION_SECRET` (at least 32 characters), and set `FRONTEND_URL` to the exact deployed frontend origin.
-3. Deploy the frontend as a static Vite build (`npm run build`). Set `VITE_API_URL` to the HTTPS API URL at build time.
+3. Deploy the frontend as a static Vite build (`npm run build`). Set `VITE_API_URL` to the HTTPS API URL at build time (for example, `https://your-api.onrender.com`) and redeploy after changing it. The production build intentionally fails when this value is missing, preventing a bundle that calls `localhost` in users' browsers.
 4. Deploy the backend with Node.js 20+ or build [`backend/Dockerfile`](backend/Dockerfile). It exposes port `5000` and expects the platform's `PORT` value when provided.
 5. Use managed MongoDB and Redis with TLS-enabled connection strings. Confirm `GET /api/health` returns `200` before accepting traffic.
 

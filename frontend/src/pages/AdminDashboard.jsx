@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -12,8 +11,10 @@ import { Badge } from "@/components/ui/Badge";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle, CheckCircle, XCircle, Clock, FileText, User, Shield, Trash2 } from 'lucide-react';
 import RateLimitMonitor from '../components/RateLimitMonitor';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminDashboard() {
+    const { api } = useAuth();
     const [pendingNotes, setPendingNotes] = useState([]);
     const [allNotes, setAllNotes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -29,32 +30,27 @@ export default function AdminDashboard() {
     const fetchNotes = async () => {
         try {
             const [pendingRes, allRes] = await Promise.all([
-                axios.get(`${import.meta.env.VITE_API_URL}/api/notes/admin/pending`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                }),
-                axios.get(`${import.meta.env.VITE_API_URL}/api/notes/admin/all`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-                })
+                api.get('/api/notes/admin/pending'),
+                api.get('/api/notes/admin/all')
             ]);
             setPendingNotes(pendingRes.data);
             setAllNotes(Array.isArray(allRes.data) ? allRes.data : allRes.data.notes || []);
             setLoading(false);
-        } catch {
-            setError('Error fetching notes');
+        } catch (err) {
+            setError(err.response?.data?.error || (err.request
+                ? 'Unable to reach the API. Check the production API URL configuration.'
+                : 'Error fetching notes'));
             setLoading(false);
         }
     };
 
     const handleReview = async (noteId, status) => {
         try {
-            await axios.post(
-                `${import.meta.env.VITE_API_URL}/api/notes/admin/review/${noteId}`,
+            await api.post(
+                `/api/notes/admin/review/${noteId}`,
                 { 
                     status, 
-                    reviewComment: reviewComment.trim() 
-                },
-                { 
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
+                    reviewComment: reviewComment.trim()
                 }
             );
             setReviewComment('');
@@ -68,10 +64,7 @@ export default function AdminDashboard() {
     const handleDelete = async (noteId) => {
         if (!window.confirm('Are you sure you want to delete this note?')) return;
         try {
-            await axios.delete(
-                `${import.meta.env.VITE_API_URL}/api/notes/${noteId}`,
-                { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-            );
+            await api.delete(`/api/notes/${noteId}`);
             fetchNotes();
         } catch (err) {
             console.error('Delete error:', err.response?.data || err.message);
