@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Star, Send, Edit, Trash2, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-export default function ReviewSection({ noteId, initialRating, initialReviewCount, initialUserReview }) {
+export default function ReviewSection({ noteId, initialRating, initialReviewCount }) {
     const { user, token } = useAuth();
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -37,7 +37,7 @@ export default function ReviewSection({ noteId, initialRating, initialReviewCoun
             setRating(response.data.review.rating);
             setComment(response.data.review.comment || '');
         }).catch(() => {}).finally(() => setReviewLoading(false));
-    }, [noteId, user, token]);
+    }, [noteId, user, token, apiUrl]);
 
     const fetchReviews = async (pageNum = 1) => {
         setLoading(true);
@@ -113,7 +113,7 @@ export default function ReviewSection({ noteId, initialRating, initialReviewCoun
             setUserReview(null);
             fetchReviews(1);
             fetchStats();
-        } catch (err) {
+        } catch {
             alert('Failed to delete review');
         }
     };

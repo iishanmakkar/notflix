@@ -4,6 +4,7 @@ const compression = require("compression");
 const cors = require("cors");
 const express = require("express");
 const helmet = require("helmet");
+const morgan = require("morgan");
 const session = require("express-session");
 const passport = require("passport");
 const { createServer } = require("http");
@@ -15,6 +16,7 @@ const jwt = require("jsonwebtoken");
 const { validateEnvironment } = require("./config/env");
 const redisClient = require("./config/redis");
 const cacheService = require("./utils/cache");
+const logger = require("./utils/logger");
 require("./utils/cloudinary");
 const Message = require("./models/chatModel");
 const User = require("./models/User");
@@ -61,6 +63,14 @@ const io = new Server(httpServer, {
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+
+const morganFormat = isProduction ? 'combined' : 'dev';
+app.use(morgan(morganFormat, {
+  stream: {
+    write: (message) => logger.info(message.trim())
+  }
+}));
+
 app.use(compression());
 app.use(cors({
   origin: validateOrigin,
@@ -185,7 +195,7 @@ app.use((err, _req, res, _next) => {
   const status = err.name === "MulterError" || err.name === "ValidationError" || err.name === "CastError"
     ? 400
     : err.status || 500;
-  if (status >= 500) console.error(err);
+  if (status >= 500) logger.error(err);
   res.status(status).json({ error: status >= 500 ? "Internal server error" : err.message });
 });
 
@@ -195,14 +205,14 @@ async function start() {
   await redisClient.connect();
 
   if (isProduction) {
-    cron.schedule("0 */6 * * *", () => cacheService.warmNotesCache().catch(console.error));
+    cron.schedule("0 */6 * * *", () => cacheService.warmNotesCache().catch(err => logger.error(err)));
   }
 
-  server = httpServer.listen(PORT, () => console.log(`Notflix API listening on port ${PORT}`));
+  server = httpServer.listen(PORT, () => logger.info(`Notflix API listening on port ${PORT}`));
 }
 
 async function shutdown(signal) {
-  console.log(`${signal} received, shutting down gracefully...`);
+  logger.info(`${signal} received, shutting down gracefully...`);
   if (server) server.close();
   await mongoose.disconnect();
   await redisClient.disconnect();
@@ -213,6 +223,6 @@ process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
 start().catch((error) => {
-  console.error("Unable to start Notflix API", error);
+  logger.error("Unable to start Notflix API", error);
   process.exit(1);
 });

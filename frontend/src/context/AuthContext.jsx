@@ -153,6 +153,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const register = async (name, email, password) => {
+    try {
+      const response = await api.post('/api/auth/register', { name, email, password });
+      const data = response.data;
+
+      if (!data.token || !data.user) {
+        throw new Error('Invalid response from server');
+      }
+
+      const formattedUserData = {
+        _id: data.user.id || data.user._id,
+        name: data.user.name,
+        email: data.user.email,
+        role: data.user.role,
+        isPremium: data.user.isPremium === undefined ? false : data.user.isPremium,
+        profileImage: data.user.profileImage || ''
+      };
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(formattedUserData));
+      setUser(formattedUserData);
+      setToken(data.token);
+      return data;
+    } catch (error) {
+      console.error('Register error:', error.response?.data || error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     setUser,
@@ -161,6 +190,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
+    register,
     api,
     updatePremiumStatus,
     isPremium: user?.isPremium || false

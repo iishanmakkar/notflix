@@ -18,20 +18,20 @@ export default function NotificationBell() {
 
   const headers = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
 
-  const loadNotifications = async () => {
-    if (!localStorage.getItem("token")) return;
-    try {
-      const response = await fetch(`${API_BASE}/api/notifications`, { headers: headers() });
-      if (!response.ok) return;
-      const data = await response.json();
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unreadCount || 0);
-    } catch {
-      // Notifications should never interrupt the main application flow.
-    }
-  };
-
   useEffect(() => {
+    const loadNotifications = async () => {
+      if (!localStorage.getItem("token")) return;
+      try {
+        const response = await fetch(`${API_BASE}/api/notifications`, { headers: headers() });
+        if (!response.ok) return;
+        const data = await response.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      } catch {
+        // Notifications should never interrupt the main application flow.
+      }
+    };
+
     loadNotifications();
     const interval = window.setInterval(loadNotifications, 30000);
     return () => window.clearInterval(interval);

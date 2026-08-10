@@ -32,10 +32,8 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { trackUserAction } from "../utils/analytics";
 
-const defaultSubjects = ["All", "Java", "C++", "Web Development", "Python", "Data Structures", "Algorithms"];
-
 export default function NotesPage() {
-    const { api, user, token } = useAuth();
+    const { api, user } = useAuth();
     const [notes, setNotes] = useState([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedSubject, setSelectedSubject] = useState("All");
@@ -61,7 +59,7 @@ export default function NotesPage() {
         };
 
         fetchNotes();
-    }, []);
+    }, [api]);
 
     useEffect(() => {
         const handleScroll = () => {

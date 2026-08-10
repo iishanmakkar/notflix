@@ -13,12 +13,12 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 export default function ProfilePage() {
-    const { user, setUser, token, api } = useAuth();
+    const { user, setUser, token } = useAuth();
     const navigate = useNavigate();
     const fileInputRef = useRef();
 
     const [name, setName] = useState(user?.name || '');
-    const [profileImage, setProfileImage] = useState(user?.profileImage || '');
+
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(user?.profileImage || '');
 
@@ -85,7 +85,7 @@ export default function ProfilePage() {
             };
             localStorage.setItem('user', JSON.stringify(formattedUser));
             setUser(formattedUser);
-            setProfileImage(updatedUser.profileImage || '');
+
             setPreviewUrl(updatedUser.profileImage || '');
             setSelectedFile(null);
             setProfileMessage({ type: 'success', text: 'Profile updated successfully!' });

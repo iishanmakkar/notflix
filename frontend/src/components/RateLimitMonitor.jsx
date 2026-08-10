@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/button';
@@ -13,7 +13,7 @@ const RateLimitMonitor = () => {
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -39,9 +39,9 @@ const RateLimitMonitor = () => {
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, [API_BASE_URL]);
 
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/rate-limit/config`);
       if (!response.ok) {
@@ -53,7 +53,7 @@ const RateLimitMonitor = () => {
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, [API_BASE_URL]);
 
   const resetRateLimit = async (type, identifier = null) => {
     setResetLoading(true);
@@ -143,7 +143,7 @@ const RateLimitMonitor = () => {
     // Refresh stats every 30 seconds
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchStats, fetchConfig]);
 
   if (loading) {
     return (

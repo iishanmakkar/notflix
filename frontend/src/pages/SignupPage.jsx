@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+
 import { FiLock } from "react-icons/fi";
 import SocialLoginButtons from "./SocialSignupButtons";
+import { useAuth } from "../context/AuthContext";
 
 const SignupPage = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
@@ -16,23 +18,13 @@ const SignupPage = () => {
     setLoading(true);
     try {
       console.log('Attempting signup with:', { name, email });
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
-        name,
-        email,
-        password,
-      });
+      await register(name, email, password);
       
-      console.log('Signup response:', response.data);
-      
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-      }
-      
+      console.log('Signup successful');
       navigate("/");
     } catch (error) {
-      console.error('Signup error:', error.response?.data);
-
+      console.error('Signup error:', error.response?.data || error);
+      alert(error.response?.data?.error || error.response?.data?.message || "Failed to sign up");
     } finally {
       setLoading(false);
     }

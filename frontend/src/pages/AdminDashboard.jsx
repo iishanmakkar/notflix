@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -23,11 +23,7 @@ export default function AdminDashboard() {
     const [selectedNote, setSelectedNote] = useState(null);
     const [activeTab, setActiveTab] = useState('notes'); // 'notes' or 'rate-limits'
 
-    useEffect(() => {
-        fetchNotes();
-    }, []);
-
-    const fetchNotes = async () => {
+    const fetchNotes = useCallback(async () => {
         try {
             const [pendingRes, allRes] = await Promise.all([
                 api.get('/api/notes/admin/pending'),
@@ -42,7 +38,11 @@ export default function AdminDashboard() {
                 : 'Error fetching notes'));
             setLoading(false);
         }
-    };
+    }, [api]);
+
+    useEffect(() => {
+        fetchNotes();
+    }, [fetchNotes]);
 
     const handleReview = async (noteId, status) => {
         try {
