@@ -40,7 +40,7 @@ function AppContent() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/notes" element={<NotesPage />} />
+        <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
         <Route path="/auth/google/callback" element={<GoogleCallback />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/admin" element={
@@ -48,7 +48,7 @@ function AppContent() {
             <AdminDashboard />
           </AdminRoute>
         } />
-        <Route path="/upload" element={<UploadPage />} />
+        <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
         <Route path="/premium" element={<PremiumPage />} />
         <Route path="/ocr" element={<OCRPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
