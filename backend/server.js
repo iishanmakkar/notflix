@@ -10,7 +10,7 @@ const passport = require("passport");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const cron = require("node-cron");
-const mongoose = require("mongoose");
+
 const jwt = require("jsonwebtoken");
 
 const { validateEnvironment } = require("./config/env");
@@ -19,8 +19,10 @@ const cacheService = require("./utils/cache");
 const logger = require("./utils/logger");
 require("./utils/cloudinary");
 const Message = require("./models/chatModel");
-const User = require("./models/User");
+const connectDB = require("./config/db");
+// const User = require("./models/User"); // User model now via Supabase
 const { authMiddleware } = require("./middlewares/authMiddleware");
+const { findUserById } = require("./utils/db");
 const { adminMiddleware } = require("./middlewares/adminMiddleware");
 
 const noteRoutes = require("./routes/noteRoutes");
@@ -142,8 +144,8 @@ io.use(async (socket, next) => {
     if (!token) return next(new Error("Authentication token not provided"));
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select("_id name role");
-    if (!user) return next(new Error("User not found"));
+    const user = await findUserById(decoded.userId);
+    if (!user) return next(new Error("Authentication token is not valid"));
 
     socket.user = user;
     return next();
@@ -160,8 +162,7 @@ io.on("connection", (socket) => {
       socket.join(room);
       const messages = await Message.find({ room })
         .sort({ timestamp: 1 })
-        .limit(50)
-        .populate("sender", "name");
+        .limit(50);
       socket.emit("room_messages", messages);
     } catch (_error) {
       socket.emit("error", "Failed to join room");
@@ -201,20 +202,21 @@ app.use((err, _req, res, _next) => {
 
 let server;
 async function start() {
-  await mongoose.connect(process.env.MONGO_URI);
+  await connectDB();
   await redisClient.connect();
+  // Start listening on the port provided by Railway or fallback to 5000
+  server = httpServer.listen(PORT, () => logger.info(`Notflix API listening on port ${PORT}`));
 
   if (isProduction) {
     cron.schedule("0 */6 * * *", () => cacheService.warmNotesCache().catch(err => logger.error(err)));
   }
 
-  server = httpServer.listen(PORT, () => logger.info(`Notflix API listening on port ${PORT}`));
 }
 
 async function shutdown(signal) {
   logger.info(`${signal} received, shutting down gracefully...`);
   if (server) server.close();
-  await mongoose.disconnect();
+  // No mongoose connection to close
   await redisClient.disconnect();
   process.exit(0);
 }

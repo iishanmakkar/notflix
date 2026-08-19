@@ -1,4 +1,4 @@
-const User = require("../models/User");
+const { createUser, findUserByEmail, findUserById, updateUser } = require('../utils/db');
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cacheService = require('../utils/cache');
@@ -10,12 +10,11 @@ exports.register = async (req, res) => {
   const { name, email, password } = req.body;
 
   try {
-    if (await User.findOne({ email })) {
+    if (await findUserByEmail(email)) {
       return res.status(400).json({ error: "Email already registered" });
     }
 
-    const user = new User({ name, email, password });
-    await user.save();
+    const user = await createUser({ name, email, password });
 
     const token = jwt.sign(
       { userId: user._id },
@@ -44,7 +43,7 @@ exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email });
+    const user = await findUserByEmail(email);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -182,11 +181,16 @@ exports.updateProfile = async (req, res) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      updateData,
-      { new: true }
-    ).select("_id name email role isPremium profileImage");
+    const user = await updateUser(req.user._id, updateData);
+    // Ensure returned fields match expected shape
+    const userData = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isPremium: user.isPremium,
+      profileImage: user.profileImage || ''
+    };
 
     await cacheService.invalidateUserCache(req.user._id);
 
@@ -219,7 +223,7 @@ exports.changePassword = async (req, res) => {
       return res.status(400).json({ error: "New password must be at least 8 characters long" });
     }
 
-    const user = await User.findById(req.user._id);
+    const user = await findUserById(req.user._id);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -229,8 +233,9 @@ exports.changePassword = async (req, res) => {
       return res.status(401).json({ error: "Current password is incorrect" });
     }
 
-    user.password = newPassword;
-    await user.save();
+    await updateUser(req.user._id, {
+      password: await bcrypt.hash(newPassword, 10),
+    });
 
     await cacheService.invalidateUserCache(req.user._id);
 
@@ -263,7 +268,7 @@ exports.validateCachedToken = async (req, res, next) => {
     req.user = decoded.id || decoded.userId;
     
     // Cache the token for future requests
-    const user = await User.findById(req.user).select("name email _id isPremium role");
+    const user = await findUserById(req.user);
     if (user) {
       const userData = {
         id: user._id,

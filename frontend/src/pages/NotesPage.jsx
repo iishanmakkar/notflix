@@ -35,6 +35,7 @@ import { trackUserAction } from "../utils/analytics";
 export default function NotesPage() {
     const { api, user } = useAuth();
     const [notes, setNotes] = useState([]);
+    const [loadError, setLoadError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedSubject, setSelectedSubject] = useState("All");
     const [sortBy, setSortBy] = useState("date");
@@ -45,6 +46,7 @@ export default function NotesPage() {
     useEffect(() => {
         const fetchNotes = async () => {
             try {
+                setLoadError("");
                 let response;
                 if (api) {
                     response = await api.get('/api/notes');
@@ -55,6 +57,8 @@ export default function NotesPage() {
                 setNotes(Array.isArray(response.data) ? response.data : response.data.notes || []);
             } catch (err) {
                 console.error("Error fetching notes:", err);
+                setNotes([]);
+                setLoadError("Study notes are temporarily unavailable. Please try again shortly.");
             }
         };
 
@@ -201,6 +205,11 @@ export default function NotesPage() {
             </Card>
 
             {/* Notes Grid */}
+            {loadError && (
+                <div className="border-2 border-red-700 bg-red-50 p-4 font-medium text-red-800" role="alert">
+                    {loadError}
+                </div>
+            )}
             <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredNotes.map((note) => (
                     <Card
@@ -319,7 +328,7 @@ export default function NotesPage() {
                 ))}
             </section>
 
-            {filteredNotes.length === 0 && (
+            {!loadError && filteredNotes.length === 0 && (
                 <div className="text-center py-12 text-[#64748b]">
                     <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                         <Search className="w-8 h-8 text-[#64748b]" />

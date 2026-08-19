@@ -9,12 +9,11 @@ router.get('/messages/:room', async (req, res) => {
   try {
     const messages = await Message.find({ room: req.params.room })
       .sort({ timestamp: 1 })
-      .populate('sender', 'name')
       .lean();
 
     const formattedMessages = messages.map((message) => ({
       _id: message._id,
-      sender: message.sender._id,
+      sender: String(message.sender),
       senderName: message.senderName,
       content: message.content,
       room: message.room,
@@ -46,4 +45,4 @@ router.delete('/messages/:messageId', authMiddleware, adminMiddleware, async (re
   }
 });
 
-module.exports = router; 
+module.exports = router;

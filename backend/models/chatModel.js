@@ -5,9 +5,9 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // Supabase user IDs are UUID strings, not MongoDB ObjectIds.
   sender: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
     required: true
   },
   senderName: {
