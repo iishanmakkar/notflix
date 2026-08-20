@@ -12,40 +12,6 @@ const configurePdfWorker = () => {
 
 configurePdfWorker();
 
-const SUPPORTED_LANGUAGES = [
-    { code: 'eng', name: 'English' },
-    { code: 'spa', name: 'Spanish (Español)' },
-    { code: 'fre', name: 'French (Français)' },
-    { code: 'ger', name: 'German (Deutsch)' },
-    { code: 'ita', name: 'Italian (Italiano)' },
-    { code: 'por', name: 'Portuguese (Português)' },
-    { code: 'rus', name: 'Russian (Русский)' },
-    { code: 'chs', name: 'Chinese Simplified (简体中文)' },
-    { code: 'cht', name: 'Chinese Traditional (繁體中文)' },
-    { code: 'jpn', name: 'Japanese (日本語)' },
-    { code: 'kor', name: 'Korean (한국어)' },
-    { code: 'ara', name: 'Arabic (العربية)' },
-    { code: 'hin', name: 'Hindi (हिन्दी)' },
-    { code: 'tur', name: 'Turkish (Türkçe)' }
-];
-
-const ocrToTesseractLang = {
-  eng: 'eng',
-  spa: 'spa',
-  fre: 'fra',
-  ger: 'deu',
-  ita: 'ita',
-  por: 'por',
-  rus: 'rus',
-  chs: 'chi_sim',
-  cht: 'chi_tra',
-  jpn: 'jpn',
-  kor: 'kor',
-  ara: 'ara',
-  hin: 'hin',
-  tur: 'tur'
-};
-
 const OCRComponent = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [preview, setPreview] = useState(null);
@@ -55,7 +21,6 @@ const OCRComponent = () => {
     const [errDetails, setErrDetails] = useState(null);
     const [copied, setCopied] = useState(false);
     const [dragActive, setDragActive] = useState(false);
-    const [selectedLanguage, setSelectedLanguage] = useState('eng');
     const fileInputRef = useRef(null);
 
     const handleCopy = () => {
@@ -180,8 +145,7 @@ const OCRComponent = () => {
                 throw new Error('No pages detected in PDF or PDF is empty');
             }
 
-            const tesseractLang = ocrToTesseractLang[selectedLanguage] || 'eng';
-            const worker = await Tesseract.createWorker(tesseractLang, 1, {
+            const worker = await Tesseract.createWorker('eng', 1, {
                 logger: (m) => console.log('[PDF OCR]', m)
             });
 
@@ -206,7 +170,7 @@ const OCRComponent = () => {
             setResult({
                 text: extractedText,
                 confidence: avgConfidence,
-                language: selectedLanguage,
+                language: 'eng',
                 source: 'pdf',
                 pageCount: canvases.length,
                 totalPages: pageCount,
@@ -240,11 +204,11 @@ const OCRComponent = () => {
         setError(null);
 
         const formData = new FormData();
-        formData.append('language', selectedLanguage);
+        formData.append('language', 'eng');
         formData.append('image', selectedFile);
 
         try {
-            const response = await axios.post(`${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/ocr/process?language=${selectedLanguage}`, formData, {
+            const response = await axios.post(`${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/ocr/process?language=eng`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -347,22 +311,7 @@ const OCRComponent = () => {
                     </div>
                 )}
 
-                <div className="flex flex-col text-left">
-                    <label htmlFor="language-select" className="font-display font-bold text-sm text-black mb-2">Select OCR Language</label>
-                    <select
-                        id="language-select"
-                        value={selectedLanguage}
-                        onChange={(e) => setSelectedLanguage(e.target.value)}
-                        disabled={loading}
-                        className="w-full p-3 neo-border bg-white text-black font-semibold focus:outline-none"
-                    >
-                        {SUPPORTED_LANGUAGES.map((lang) => (
-                            <option key={lang.code} value={lang.code}>
-                                {lang.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+
 
                 <button
                     type="submit"

@@ -7,23 +7,6 @@ const FormData = require("form-data");
 const Tesseract = require("tesseract.js");
 const cacheService = require('../utils/cache');
 
-const ocrToTesseractLang = {
-  eng: 'eng',
-  spa: 'spa',
-  fre: 'fra',
-  ger: 'deu',
-  ita: 'ita',
-  por: 'por',
-  rus: 'rus',
-  chs: 'chi_sim',
-  cht: 'chi_tra',
-  jpn: 'jpn',
-  kor: 'kor',
-  ara: 'ara',
-  hin: 'hin',
-  tur: 'tur'
-};
-
 const storage = multer.memoryStorage();
 const upload = multer({
     storage,
@@ -77,7 +60,7 @@ const performOCR = async (req, res) => {
         });
 
         const apiKey = process.env.OCR_SPACE_API_KEY;
-        const language = req.body.language || req.query.language || 'eng';
+        const language = 'eng';
         console.log("Resolved OCR language:", language);
 
         let ocrResult;
@@ -90,9 +73,6 @@ const performOCR = async (req, res) => {
                 contentType: req.file.mimetype
             });
             formData.append('language', language);
-            if (language === 'hin') {
-                formData.append('ocrengine', '3');
-            }
 
             try {
                 usedOCRSpace = true;
@@ -157,8 +137,7 @@ const performOCR = async (req, res) => {
                 );
                 fs.writeFileSync(tempImagePath, req.file.buffer);
 
-                const tesseractLang = ocrToTesseractLang[language] || 'eng';
-                const tesseractResult = await Tesseract.recognize(tempImagePath, tesseractLang, {
+                const tesseractResult = await Tesseract.recognize(tempImagePath, 'eng', {
                     logger: (m) => console.log("Tesseract progress:", m.progress * 100, "%"),
                 });
 
@@ -209,7 +188,7 @@ const performBatchOCR = async (req, res) => {
         }
 
         const apiKey = process.env.OCR_SPACE_API_KEY;
-        const language = req.body.language || req.query.language || 'eng';
+        const language = 'eng';
 
         const results = [];
         const uncachedImages = [];
@@ -242,9 +221,6 @@ const performBatchOCR = async (req, res) => {
                         contentType: file.mimetype
                     });
                     formData.append('language', language);
-                    if (language === 'hin') {
-                        formData.append('ocrengine', '3');
-                    }
 
                     usedOCRSpace = true;
                     const response = await axios.post(
@@ -301,8 +277,7 @@ const performBatchOCR = async (req, res) => {
                     );
                     fs.writeFileSync(tempImagePath, file.buffer);
 
-                    const tesseractLang = ocrToTesseractLang[language] || 'eng';
-                    const tesseractResult = await Tesseract.recognize(tempImagePath, tesseractLang, {
+                    const tesseractResult = await Tesseract.recognize(tempImagePath, 'eng', {
                         logger: () => {},
                     });
 
