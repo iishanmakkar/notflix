@@ -214,7 +214,7 @@ export default function NotesPage() {
                 {filteredNotes.map((note) => (
                     <Card
                         key={note._id}
-                        className="group relative overflow-hidden text-left glass-effect animate-fade-in-down hover:scale-[1.025] hover:shadow-2xl transition-all duration-300"
+                        className="group relative overflow-hidden text-left glass-effect animate-fade-in-down hover:scale-[1.025] hover:shadow-2xl transition-all duration-300 flex flex-col h-full"
                         style={{ borderColor: "#e2e8f0", background: "linear-gradient(135deg, #fafdff 0%, #f7fbfd 100%)" }}
                     >
                         <CardHeader className="pb-3">
@@ -246,7 +246,8 @@ export default function NotesPage() {
                             </div>
                         </CardHeader>
 
-                        <CardContent className="space-y-4 text-[#64748b]">
+                        <CardContent className="space-y-4 text-[#64748b] flex-1 flex flex-col justify-between">
+                            <div className="space-y-4">
                             <div className="flex items-center justify-between text-sm">
                                 <div className="flex items-center">
                                     <User className="w-4 h-4 mr-1" /> {note.uploadedBy?.name || "Unknown"}
@@ -276,7 +277,7 @@ export default function NotesPage() {
                                 </div>
                             </div>
 
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 w-full mt-4">
                                 <Button
                                     className={`flex-1 border-2 border-black transition-all duration-300 shadow-sm ${
                                         note.isPremium 
