@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -26,6 +26,16 @@ import PDFViewerPage from "./pages/PDFViewerPage";
 // import PremiumPage from "./pages/PremiumPage";
 // import UploadPage from "./pages/UploadPage";
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 function AppContent() {
   const location = useLocation();
   const hideNavbarRoutes = ["/login", "/signup", "/auth/google/callback"];
@@ -33,6 +43,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen neo-page flex flex-col">
+      <ScrollToTop />
       <GoogleAnalytics />
       {!hideNavbar && <Navbar />}
       <main className="flex-1">
