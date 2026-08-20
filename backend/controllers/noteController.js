@@ -72,7 +72,7 @@ const getNoteById = async (req, res) => {
     }
 
     if (normNote.isPremium && (!req.user || (!req.user.isPremium && req.user.role !== "admin"))) {
-      return res.status(403).json({ error: "Premium subscription required to view this note" });
+      return res.status(403).json({ error: "Special access needed. Coming soon!" });
     }
 
     // Cache the note for future requests
@@ -594,7 +594,7 @@ const downloadNote = async (req, res) => {
     }
 
     if (normNote.isPremium && (!req.user || !req.user.isPremium && req.user?.role !== "admin")) {
-      return res.status(403).json({ error: "Premium access required" });
+      return res.status(403).json({ error: "Special access needed. Coming soon!" });
     }
 
     try {
