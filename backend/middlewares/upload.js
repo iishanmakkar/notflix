@@ -51,7 +51,11 @@ const hasValidFileSignature = (file) => {
 };
 
 const validateUploadedFile = (req, res, next) => {
-  if (!req.file || !hasValidFileSignature(req.file)) {
+  // If no file is uploaded (optional in updates), skip signature verification
+  if (!req.file) {
+    return next();
+  }
+  if (!hasValidFileSignature(req.file)) {
     return res.status(400).json({ error: 'The uploaded file content does not match its declared type.' });
   }
   return next();
