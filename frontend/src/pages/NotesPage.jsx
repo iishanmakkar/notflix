@@ -297,7 +297,7 @@ export default function NotesPage() {
                                     View
                                 </Button>
                                 <a
-                                    href={note.isPremium && !user?.isPremium ? undefined : `/api/notes/${note._id}/download`}
+                                    href={note.isPremium && !user?.isPremium ? undefined : `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/notes/${note._id}/download`}
                                     target={note.isPremium && !user?.isPremium ? undefined : "_blank"}
                                     rel="noopener noreferrer"
                                     onClick={(e) => {

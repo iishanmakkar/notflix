@@ -588,7 +588,20 @@ const downloadNote = async (req, res) => {
       console.warn('Failed to increment download count');
     }
 
-    return res.redirect(normNote.fileUrl);
+    // Force browser local download by setting attachment headers and streaming the file
+    const safeTitle = normNote.title.replace(/[^a-zA-Z0-9]/g, "_");
+    const extension = normNote.fileUrl.split('.').pop() || 'pdf';
+    
+    res.setHeader('Content-Disposition', `attachment; filename="${safeTitle}.${extension}"`);
+    res.setHeader('Content-Type', extension === 'pdf' ? 'application/pdf' : 'application/octet-stream');
+
+    const fileStreamResponse = await axios({
+      method: 'get',
+      url: normNote.fileUrl,
+      responseType: 'stream'
+    });
+    
+    fileStreamResponse.data.pipe(res);
   } catch (err) {
     console.error("DOWNLOAD NOTE ERROR >>>", err);
     res.status(500).json({ error: "Failed to download note" });
