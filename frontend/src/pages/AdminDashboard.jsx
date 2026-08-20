@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, CheckCircle, XCircle, Clock, FileText, User, Shield, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, Clock, FileText, User, Shield, Trash2, Edit } from 'lucide-react';
 import RateLimitMonitor from '../components/RateLimitMonitor';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,6 +22,36 @@ export default function AdminDashboard() {
     const [reviewComment, setReviewComment] = useState('');
     const [selectedNote, setSelectedNote] = useState(null);
     const [activeTab, setActiveTab] = useState('notes'); // 'notes' or 'rate-limits'
+
+    const [editingNoteId, setEditingNoteId] = useState(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editContent, setEditContent] = useState('');
+    const [editSubject, setEditSubject] = useState('');
+    const [editIsPremium, setEditIsPremium] = useState(false);
+
+    const startEditing = (note) => {
+        setEditingNoteId(note._id || note.id);
+        setEditTitle(note.title);
+        setEditContent(note.content);
+        setEditSubject(note.subject);
+        setEditIsPremium(note.isPremium || false);
+    };
+
+    const handleSaveEdit = async (noteId) => {
+        try {
+            await api.put(`/api/notes/${noteId}`, {
+                title: editTitle.trim(),
+                description: editContent.trim(),
+                subject: editSubject.trim(),
+                isPremium: editIsPremium
+            });
+            setEditingNoteId(null);
+            fetchNotes();
+        } catch (err) {
+            console.error("Save edit error:", err);
+            setError(err.response?.data?.error || 'Error saving edits');
+        }
+    };
 
     const fetchNotes = useCallback(async () => {
         try {
@@ -126,109 +156,175 @@ export default function AdminDashboard() {
                         </div>
                         
                         <div className="grid gap-6">
-                            {pendingNotes.map((note) => (
-                                <Card key={note._id} className="border-2 border-black bg-[#b7c6c2]/50">
-                                    <CardHeader>
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <CardTitle className="text-xl">{note.title}</CardTitle>
-                                                <div className="mt-2 space-y-1">
-                                                    <div className="flex items-center text-sm text-gray-600">
-                                                        <User className="w-4 h-4 mr-1" />
-                                                        {note.uploadedBy?.name || 'Unknown User'}
-                                                    </div>
-                                                    <div className="flex items-center text-sm text-gray-600">
-                                                        <FileText className="w-4 h-4 mr-1" />
-                                                        {note.subject}
-                                                    </div>
+                            {pendingNotes.map((note) => {
+                                const isEditing = editingNoteId === (note._id || note.id);
+                                return (
+                                    <Card key={note._id || note.id} className="border-2 border-black bg-[#b7c6c2]/50">
+                                        {isEditing ? (
+                                            <CardContent className="pt-6 space-y-4">
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-1 text-black">Title</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={editTitle} 
+                                                        onChange={(e) => setEditTitle(e.target.value)} 
+                                                        className="w-full border-2 border-black p-2 rounded bg-white text-black font-semibold"
+                                                    />
                                                 </div>
-                                            </div>
-                                            <Badge className="bg-[#b7c6c2] text-black">
-                                                Pending Review
-                                            </Badge>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p className="text-gray-700 mb-4">{note.content}</p>
-                                        
-                                        {selectedNote === note._id ? (
-                                            <div className="space-y-4">
-                                                <Textarea
-                                                    placeholder="Add a review comment (optional)"
-                                                    value={reviewComment}
-                                                    onChange={(e) => setReviewComment(e.target.value)}
-                                                    className="w-full"
-                                                />
-                                                <div className="flex space-x-4">
-                                                    <Button
-                                                        onClick={() => handleReview(note._id, 'approved')}
-                                                        className="bg-green-500 hover:bg-green-600"
-                                                    >
-                                                        <CheckCircle className="w-4 h-4 mr-2" />
-                                                        Approve
-                                                    </Button>
-                                                    <Button
-                                                        onClick={() => handleReview(note._id, 'rejected')}
-                                                        className="bg-red-500 hover:bg-red-600"
-                                                    >
-                                                        <XCircle className="w-4 h-4 mr-2" />
-                                                        Reject
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        onClick={() => {
-                                                            setSelectedNote(null);
-                                                            setReviewComment('');
-                                                        }}
-                                                    >
-                                                        Cancel
-                                                    </Button>
-                                                    {note.fileUrl && (
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={() => window.open(note.fileUrl, '_blank')}
-                                                        >
-                                                            View Document
-                                                        </Button>
-                                                    )}
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
-                                                        onClick={() => handleDelete(note._id)}
-                                                    >
-                                                        <Trash2 className="w-4 h-4 mr-1" />
-                                                        Delete
-                                                    </Button>
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-1 text-black">Subject</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={editSubject} 
+                                                        onChange={(e) => setEditSubject(e.target.value)} 
+                                                        className="w-full border-2 border-black p-2 rounded bg-white text-black font-semibold"
+                                                    />
                                                 </div>
-                                            </div>
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-1 text-black">Description</label>
+                                                    <Textarea 
+                                                        value={editContent} 
+                                                        onChange={(e) => setEditContent(e.target.value)} 
+                                                        className="w-full border-2 border-black p-2 rounded bg-white text-black font-semibold"
+                                                    />
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        id={`premium-${note._id || note.id}`}
+                                                        checked={editIsPremium} 
+                                                        onChange={(e) => setEditIsPremium(e.target.checked)} 
+                                                        className="w-4 h-4 border-2 border-black accent-black"
+                                                    />
+                                                    <label htmlFor={`premium-${note._id || note.id}`} className="text-sm font-bold cursor-pointer text-black">Premium Document (Requires Subscription)</label>
+                                                </div>
+                                                <div className="flex space-x-2 pt-2">
+                                                    <Button onClick={() => handleSaveEdit(note._id || note.id)} className="bg-black text-white hover:bg-black/90">Save Changes</Button>
+                                                    <Button onClick={() => setEditingNoteId(null)} variant="outline" className="border-2 border-black">Cancel</Button>
+                                                </div>
+                                            </CardContent>
                                         ) : (
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    onClick={() => setSelectedNote(note._id)}
-                                                    className="flex-1"
-                                                >
-                                                    Review Note
-                                                </Button>
-                                                {note.fileUrl && (
-                                                    <Button
-                                                        variant="outline"
-                                                        onClick={() => window.open(note.fileUrl, '_blank')}
-                                                    >
-                                                        View Document
-                                                    </Button>
-                                                )}
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(note._id)}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            </div>
+                                            <>
+                                                <CardHeader>
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <CardTitle className="text-xl">{note.title}</CardTitle>
+                                                                {note.isPremium && (
+                                                                    <Badge className="bg-black text-white border-2 border-black">
+                                                                        <Crown className="w-3 h-3 mr-1 inline" />
+                                                                        Premium
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-2 space-y-1">
+                                                                <div className="flex items-center text-sm text-gray-600">
+                                                                    <User className="w-4 h-4 mr-1" />
+                                                                    {note.uploadedBy?.name || 'Unknown User'}
+                                                                </div>
+                                                                <div className="flex items-center text-sm text-gray-600">
+                                                                    <FileText className="w-4 h-4 mr-1" />
+                                                                    {note.subject}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <Badge className="bg-[#b7c6c2] text-black">
+                                                            Pending Review
+                                                        </Badge>
+                                                    </div>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <p className="text-gray-700 mb-4">{note.content}</p>
+                                                    
+                                                    {selectedNote === note._id ? (
+                                                        <div className="space-y-4">
+                                                            <Textarea
+                                                                placeholder="Add a review comment (optional)"
+                                                                value={reviewComment}
+                                                                onChange={(e) => setReviewComment(e.target.value)}
+                                                                className="w-full"
+                                                            />
+                                                            <div className="flex space-x-4">
+                                                                <Button
+                                                                    onClick={() => handleReview(note._id, 'approved')}
+                                                                    className="bg-green-500 hover:bg-green-600"
+                                                                >
+                                                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                                                    Approve
+                                                                </Button>
+                                                                <Button
+                                                                    onClick={() => handleReview(note._id, 'rejected')}
+                                                                    className="bg-red-500 hover:bg-red-600"
+                                                                >
+                                                                    <XCircle className="w-4 h-4 mr-2" />
+                                                                    Reject
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    onClick={() => {
+                                                                        setSelectedNote(null);
+                                                                        setReviewComment('');
+                                                                    }}
+                                                                >
+                                                                    Cancel
+                                                                </Button>
+                                                                {note.fileUrl && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        onClick={() => window.open(note.fileUrl, '_blank')}
+                                                                    >
+                                                                        View Document
+                                                                    </Button>
+                                                                )}
+                                                                <Button
+                                                                    variant="destructive"
+                                                                    size="sm"
+                                                                    onClick={() => handleDelete(note._id)}
+                                                                >
+                                                                    <Trash2 className="w-4 h-4 mr-1" />
+                                                                    Delete
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                onClick={() => setSelectedNote(note._id)}
+                                                                className="flex-1"
+                                                            >
+                                                                Review Note
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() => startEditing(note)}
+                                                                className="border-2 border-black"
+                                                            >
+                                                                    <Edit className="w-4 h-4 mr-1" />
+                                                                    Edit
+                                                            </Button>
+                                                            {note.fileUrl && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    onClick={() => window.open(note.fileUrl, '_blank')}
+                                                                >
+                                                                    View Document
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                onClick={() => handleDelete(note._id)}
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </CardContent>
+                                            </>
                                         )}
-                                    </CardContent>
-                                </Card>
-                            ))}
+                                    </Card>
+                                );
+                            })}
                             {pendingNotes.length === 0 && (
                                 <div className="text-center py-8 text-gray-500">
                                     <Clock className="w-12 h-12 mx-auto mb-4 text-gray-400" />
@@ -246,69 +342,136 @@ export default function AdminDashboard() {
                         </div>
                         
                         <div className="grid gap-6">
-                            {allNotes.map((note) => (
-                                <Card key={note._id} className="border border-gray-200">
-                                    <CardHeader>
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <CardTitle className="text-xl">{note.title}</CardTitle>
-                                                <div className="mt-2 space-y-1">
-                                                    <div className="flex items-center text-sm text-gray-600">
-                                                        <User className="w-4 h-4 mr-1" />
-                                                        {note.uploadedBy?.name || 'Unknown User'}
-                                                    </div>
-                                                    <div className="flex items-center text-sm text-gray-600">
-                                                        <FileText className="w-4 h-4 mr-1" />
-                                                        {note.subject}
-                                                    </div>
+                             {allNotes.map((note) => {
+                                const isEditing = editingNoteId === (note._id || note.id);
+                                return (
+                                    <Card key={note._id || note.id} className="border border-gray-200">
+                                        {isEditing ? (
+                                            <CardContent className="pt-6 space-y-4">
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-1 text-black">Title</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={editTitle} 
+                                                        onChange={(e) => setEditTitle(e.target.value)} 
+                                                        className="w-full border-2 border-black p-2 rounded bg-white text-black font-semibold"
+                                                    />
                                                 </div>
-                                            </div>
-                                            <Badge className={
-                                                note.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                note.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                                'bg-[#b7c6c2] text-black'
-                                            }>
-                                                {note.status.charAt(0).toUpperCase() + note.status.slice(1)}
-                                            </Badge>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p className="text-gray-700 mb-4">{note.content}</p>
-                                        {note.reviewComment && (
-                                            <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                                                <p className="text-sm text-gray-600">
-                                                    <span className="font-semibold">Review Comment:</span> {note.reviewComment}
-                                                </p>
-                                            </div>
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-1 text-black">Subject</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={editSubject} 
+                                                        onChange={(e) => setEditSubject(e.target.value)} 
+                                                        className="w-full border-2 border-black p-2 rounded bg-white text-black font-semibold"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-semibold mb-1 text-black">Description</label>
+                                                    <Textarea 
+                                                        value={editContent} 
+                                                        onChange={(e) => setEditContent(e.target.value)} 
+                                                        className="w-full border-2 border-black p-2 rounded bg-white text-black font-semibold"
+                                                    />
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        id={`all-premium-${note._id || note.id}`}
+                                                        checked={editIsPremium} 
+                                                        onChange={(e) => setEditIsPremium(e.target.checked)} 
+                                                        className="w-4 h-4 border-2 border-black accent-black"
+                                                    />
+                                                    <label htmlFor={`all-premium-${note._id || note.id}`} className="text-sm font-bold cursor-pointer text-black">Premium Document (Requires Subscription)</label>
+                                                </div>
+                                                <div className="flex space-x-2 pt-2">
+                                                    <Button onClick={() => handleSaveEdit(note._id || note.id)} className="bg-black text-white hover:bg-black/90">Save Changes</Button>
+                                                    <Button onClick={() => setEditingNoteId(null)} variant="outline" className="border-2 border-black">Cancel</Button>
+                                                </div>
+                                            </CardContent>
+                                        ) : (
+                                            <>
+                                                <CardHeader>
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <CardTitle className="text-xl">{note.title}</CardTitle>
+                                                                {note.isPremium && (
+                                                                    <Badge className="bg-black text-white border-2 border-black">
+                                                                        <Crown className="w-3 h-3 mr-1 inline" />
+                                                                        Premium
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-2 space-y-1">
+                                                                <div className="flex items-center text-sm text-gray-600">
+                                                                    <User className="w-4 h-4 mr-1" />
+                                                                    {note.uploadedBy?.name || 'Unknown User'}
+                                                                </div>
+                                                                <div className="flex items-center text-sm text-gray-600">
+                                                                    <FileText className="w-4 h-4 mr-1" />
+                                                                    {note.subject}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <Badge className={
+                                                            note.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                            note.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                                            'bg-[#b7c6c2] text-black'
+                                                        }>
+                                                            {note.status.charAt(0).toUpperCase() + note.status.slice(1)}
+                                                        </Badge>
+                                                    </div>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <p className="text-gray-700 mb-4">{note.content}</p>
+                                                    {note.reviewComment && (
+                                                        <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                                                            <p className="text-sm text-gray-600">
+                                                                <span className="font-semibold">Review Comment:</span> {note.reviewComment}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                    <div className="text-sm text-gray-500">
+                                                        <p>Uploaded: {new Date(note.createdAt).toLocaleDateString()}</p>
+                                                        {note.reviewedAt && (
+                                                            <p>Reviewed: {new Date(note.reviewedAt).toLocaleDateString()}</p>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex gap-2 mt-4">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => startEditing(note)}
+                                                            className="border-2 border-black"
+                                                        >
+                                                            <Edit className="w-4 h-4 mr-1" />
+                                                            Edit
+                                                        </Button>
+                                                        {note.fileUrl && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => window.open(note.fileUrl, '_blank')}
+                                                            >
+                                                                View Document
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => handleDelete(note._id)}
+                                                        >
+                                                            <Trash2 className="w-4 h-4 mr-1" />
+                                                            Delete
+                                                        </Button>
+                                                    </div>
+                                                </CardContent>
+                                            </>
                                         )}
-<div className="text-sm text-gray-500">
-                                            <p>Uploaded: {new Date(note.createdAt).toLocaleDateString()}</p>
-                                            {note.reviewedAt && (
-                                                <p>Reviewed: {new Date(note.reviewedAt).toLocaleDateString()}</p>
-                                            )}
-                                        </div>
-                                        <div className="flex gap-2 mt-4">
-                                            {note.fileUrl && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => window.open(note.fileUrl, '_blank')}
-                                                >
-                                                    View Document
-                                                </Button>
-                                            )}
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => handleDelete(note._id)}
-                                            >
-                                                <Trash2 className="w-4 h-4 mr-1" />
-                                                Delete
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
+                                    </Card>
+                                );
+                            })}
                         </div>
                     </section>
                 </>

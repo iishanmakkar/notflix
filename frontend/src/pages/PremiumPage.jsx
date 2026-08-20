@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card"
 import { Badge } from "@/components/ui/Badge"
-import { Crown, Star, Check, Download, Users, BookOpen, Zap, Shield, Headphones } from "lucide-react"
+import { Crown, Star, Check, Download, Users, BookOpen, Zap, Shield, Headphones, Eye } from "lucide-react"
 import { trackUserAction } from "../utils/analytics"
 import { useAuth } from "@/context/AuthContext"
 import { useNavigate } from "react-router-dom"
@@ -152,6 +152,24 @@ function loadRazorpayScript() {
 export default function PremiumPage() {
   const { user, setUser, api } = useAuth();
   const navigate = useNavigate();
+  const [premiumNotesList, setPremiumNotesList] = useState([]);
+  const [loadingNotes, setLoadingNotes] = useState(true);
+
+  useEffect(() => {
+    const fetchPremiumNotes = async () => {
+      try {
+        const response = await api.get("/api/notes");
+        const allNotes = response.data.notes || [];
+        const premiumOnly = allNotes.filter(note => note.isPremium);
+        setPremiumNotesList(premiumOnly);
+      } catch (err) {
+        console.error("Failed to fetch premium notes:", err);
+      } finally {
+        setLoadingNotes(false);
+      }
+    };
+    fetchPremiumNotes();
+  }, [api]);
 
   const handleUpgradeClick = async (plan) => {
     if (!user) {
@@ -345,60 +363,82 @@ export default function PremiumPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {premiumNotes.map((note, index) => (
-            <Card 
-              key={note.id} 
-              className="hover:shadow-lg transition-all duration-300 hover:scale-105 group relative overflow-hidden animate-fade-in-up border border-[#e2e8f0]"
-              style={{ animationDelay: `${index * 150}ms` }}
-            >
-              <div className="absolute top-4 right-4 z-10 animate-pulse-subtle">
-                <Badge className="bg-[#b7c6c2] text-black border-2 border-black">
-                  <Crown className="w-3 h-3 mr-1" />
-                  Premium
-                </Badge>
-              </div>
-
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg leading-tight group-hover:text-[#bbd9e8] transition-colors pr-16">
-                  {note.title}
-                </CardTitle>
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  <div>by {note.author}</div>
-                  <div>{note.university}</div>
+          {loadingNotes ? (
+            <div className="col-span-full text-center py-8 text-muted-foreground animate-pulse">
+              Loading premium notes...
+            </div>
+          ) : premiumNotesList.length > 0 ? (
+            premiumNotesList.map((note, index) => (
+              <Card 
+                key={note._id || note.id} 
+                className="hover:shadow-lg transition-all duration-300 hover:scale-105 group relative overflow-hidden animate-fade-in-up border border-[#e2e8f0] flex flex-col justify-between"
+                style={{ animationDelay: `${index * 150}ms` }}
+              >
+                <div className="absolute top-4 right-4 z-10 animate-pulse-subtle">
+                  <Badge className="bg-[#b7c6c2] text-black border-2 border-black">
+                    <Crown className="w-3 h-3 mr-1" />
+                    Premium
+                  </Badge>
                 </div>
-              </CardHeader>
 
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground line-clamp-3">{note.preview}</p>
-
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center">
-                      <Star className="w-4 h-4 mr-1 fill-[#b7c6c2] text-[#b7c6c2] animate-pulse-subtle" />
-                      <span className="font-medium">{note.rating}</span>
+                <div>
+                  <CardHeader className="pb-3">
+                    <Badge className="bg-[#eaf0f5] text-[#3a5d74] w-fit mb-2 border-0">
+                      {note.subject.charAt(0).toUpperCase() + note.subject.slice(1)}
+                    </Badge>
+                    <CardTitle className="text-lg leading-tight group-hover:text-[#bbd9e8] transition-colors pr-16">
+                      {note.title}
+                    </CardTitle>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      <div>by {note.uploadedBy?.name || 'Unknown'}</div>
                     </div>
-                    <div className="flex items-center text-muted-foreground">
-                      <Download className="w-4 h-4 mr-1" />
-                      {note.downloads.toLocaleString()}
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground line-clamp-3">{note.content}</p>
+                  </CardContent>
+                </div>
+
+                <CardContent className="pt-0 space-y-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center">
+                        <Star className="w-4 h-4 mr-1 fill-[#b7c6c2] text-[#b7c6c2] animate-pulse-subtle" />
+                        <span className="font-medium">
+                          {note.rating && note.rating > 0 ? note.rating.toFixed(1) : "No ratings"}
+                        </span>
+                      </div>
+                      <div className="flex items-center text-muted-foreground">
+                        <Download className="w-4 h-4 mr-1" />
+                        {(note.downloads || 0).toLocaleString()}
+                      </div>
+                      <div className="flex items-center text-muted-foreground">
+                        <Eye className="w-4 h-4 mr-1" />
+                        {(note.views || 0).toLocaleString()}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <Button 
-                  className={`w-full bg-gradient-to-r from-[#bbd9e8] to-[#a8c8d8] hover:from-[#a8c8d8] hover:to-[#bbd9e8] text-white transition-all duration-300 hover:scale-105 border border-[#e2e8f0] ${user?.isPremium ? 'bg-green-500 text-white cursor-default' : ''}`}
-                  onClick={() => {
-                    if (!user?.isPremium) {
-                      trackUserAction.viewPremiumContent('note');
-                      document.getElementById('pricing-plans')?.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }}
-                  disabled={user?.isPremium}
-                >
-                  {user?.isPremium ? '✅ Included in Premium' : 'Get Premium Access'}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                  <Button 
+                    className={`w-full bg-gradient-to-r from-[#bbd9e8] to-[#a8c8d8] hover:from-[#a8c8d8] hover:to-[#bbd9e8] text-white transition-all duration-300 hover:scale-105 border border-[#e2e8f0] ${user?.isPremium || user?.role === 'admin' ? 'bg-green-500 text-white cursor-default' : ''}`}
+                    onClick={() => {
+                      if (!user?.isPremium && user?.role !== 'admin') {
+                        trackUserAction.viewPremiumContent('note');
+                        document.getElementById('pricing-plans')?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    disabled={user?.isPremium || user?.role === 'admin'}
+                  >
+                    {user?.isPremium || user?.role === 'admin' ? '✅ Included in Premium' : 'Get Premium Access'}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-8 text-muted-foreground border border-dashed rounded-lg p-6">
+              No premium notes uploaded yet.
+            </div>
+          )}
         </div>
       </section>
 

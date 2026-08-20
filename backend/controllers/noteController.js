@@ -280,7 +280,7 @@ const uploadNote = async (req, res) => {
 const updateNote = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, subject } = req.body;
+    const { title, description, subject, isPremium } = req.body;
 
     const updateData = {};
 
@@ -294,6 +294,10 @@ const updateNote = async (req, res) => {
 
     if (subject && typeof subject === 'string') {
       updateData.subject = subject.trim().toLowerCase();
+    }
+
+    if (isPremium !== undefined && req.user.role === 'admin') {
+      updateData.isPremium = isPremium === 'true' || isPremium === true;
     }
 
     const { data: existingNote, error: fetchErr } = await supabase
