@@ -7,6 +7,23 @@ const FormData = require("form-data");
 const Tesseract = require("tesseract.js");
 const cacheService = require('../utils/cache');
 
+const ocrToTesseractLang = {
+  eng: 'eng',
+  spa: 'spa',
+  fre: 'fra',
+  ger: 'deu',
+  ita: 'ita',
+  por: 'por',
+  rus: 'rus',
+  chs: 'chi_sim',
+  cht: 'chi_tra',
+  jpn: 'jpn',
+  kor: 'kor',
+  ara: 'ara',
+  hin: 'hin',
+  tur: 'tur'
+};
+
 const storage = multer.memoryStorage();
 const upload = multer({
     storage,
@@ -60,6 +77,7 @@ const performOCR = async (req, res) => {
         });
 
         const apiKey = process.env.OCR_SPACE_API_KEY;
+        const language = req.body.language || req.query.language || 'eng';
 
         let ocrResult;
         let usedOCRSpace = false;
@@ -70,6 +88,7 @@ const performOCR = async (req, res) => {
                 filename: req.file.originalname || 'image.png',
                 contentType: req.file.mimetype
             });
+            formData.append('language', language);
 
             try {
                 usedOCRSpace = true;
@@ -115,7 +134,7 @@ const performOCR = async (req, res) => {
                 ocrResult = {
                     text: text,
                     confidence: null,
-                    language: responseData.ParsedResults[0].TextOverlay?.Language || 'eng',
+                    language: responseData.ParsedResults[0].TextOverlay?.Language || language,
                     parsedResults: responseData.ParsedResults,
                     processedAt: new Date().toISOString()
                 };
@@ -134,7 +153,8 @@ const performOCR = async (req, res) => {
                 );
                 fs.writeFileSync(tempImagePath, req.file.buffer);
 
-                const tesseractResult = await Tesseract.recognize(tempImagePath, "eng", {
+                const tesseractLang = ocrToTesseractLang[language] || 'eng';
+                const tesseractResult = await Tesseract.recognize(tempImagePath, tesseractLang, {
                     logger: (m) => console.log("Tesseract progress:", m.progress * 100, "%"),
                 });
 
@@ -147,8 +167,8 @@ const performOCR = async (req, res) => {
 
                 ocrResult = {
                     text: tesseractText,
-                    confidence: null,
-                    language: "eng",
+                    confidence: tesseractResult.data.confidence ? tesseractResult.data.confidence / 100 : null,
+                    language: language,
                     fallback: "tesseract.js",
                     processedAt: new Date().toISOString(),
                 };
