@@ -35,7 +35,7 @@ const SignupPage = () => {
       {/* Left Section */}
       <div className="neo-dot-pattern w-full md:w-1/2 relative p-6 md:p-10 md:h-full border-b-2 border-black md:border-b-0 md:border-r-2">
         <div className="flex flex-col items-start">
-          <img src="/assets/enhanced-Photoroom.png" alt="Notflix Logo" className="h-16 md:h-20 mb-1" />
+          <img src="/Notflix-new.png" alt="Notflix Logo" className="h-16 md:h-20 mb-1" />
           <p className="text-black-700 text-lg md:text-xl mt-2 font-medium">Simplify Your Study</p>
         </div>
         <img
