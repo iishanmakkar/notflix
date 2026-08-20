@@ -9,21 +9,23 @@ const SignupPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
       console.log('Attempting signup with:', { name, email });
       await register(name, email, password);
       
       console.log('Signup successful');
       navigate("/");
-    } catch (error) {
-      console.error('Signup error:', error.response?.data || error);
-      alert(error.response?.data?.error || error.response?.data?.message || "Failed to sign up");
+    } catch (err) {
+      console.error('Signup error:', err.response?.data || err);
+      setError(err.response?.data?.error || err.response?.data?.message || "Failed to sign up");
     } finally {
       setLoading(false);
     }
@@ -48,8 +50,11 @@ const SignupPage = () => {
       <div className="w-full md:w-1/2 flex items-center justify-center bg-white md:h-full p-6">
         <div className="neo-card w-full max-w-[400px] p-8">
           <h3 className="text-2xl font-bold text-center mb-6">Create an Account</h3>
-
-
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm text-center font-medium animate-fade-in">
+              {error}
+            </div>
+          )}
 
           <form className="space-y-6" onSubmit={handleSignup}>
             <input

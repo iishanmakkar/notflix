@@ -9,20 +9,22 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
       // Use only the auth context login function
       await login(email, password);
       trackUserAction.login('email'); // Track successful login
       navigate("/");
-    } catch (error) {
-      console.error("Login error:", error.response?.data || error);
-      alert(error.response?.data?.error || error.response?.data?.message || "Invalid credentials or server error");
+    } catch (err) {
+      console.error("Login error:", err.response?.data || err);
+      setError(err.response?.data?.error || err.response?.data?.message || "Invalid credentials or server error");
     } finally {
       setLoading(false);
     }
@@ -47,8 +49,11 @@ const LoginPage = () => {
       <div className="w-full md:w-1/2 flex items-center justify-center bg-white md:h-full p-6">
         <div className="neo-card w-full max-w-[400px] p-8">
           <h3 className="text-2xl font-bold text-center mb-6">Welcome Back!</h3>
-
-
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm text-center font-medium animate-fade-in">
+              {error}
+            </div>
+          )}
 
           <form className="space-y-6" onSubmit={handleLogin}>
             <input
