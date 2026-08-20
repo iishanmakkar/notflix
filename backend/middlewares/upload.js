@@ -21,13 +21,33 @@ const upload = multer({
 }).single('file');
 
 const hasValidFileSignature = (file) => {
+  if (!file || !file.buffer) return false;
+
+  console.log("Validating file signature:", {
+    originalname: file.originalname,
+    mimetype: file.mimetype,
+    size: file.size,
+    firstBytesHex: file.buffer.subarray(0, 16).toString('hex'),
+    firstBytesAscii: file.buffer.subarray(0, 16).toString('ascii').replace(/[^\x20-\x7E]/g, '.')
+  });
+
   const header = file.buffer.subarray(0, 8);
-  if (file.mimetype === 'application/pdf') return header.toString('ascii', 0, 5) === '%PDF-';
+  if (file.mimetype === 'application/pdf') {
+    // PDF signature %PDF- can be located within the first 1024 bytes of the file (handling BOM or leading whitespace)
+    const fileContentSnippet = file.buffer.subarray(0, 1024).toString('ascii');
+    const isValid = fileContentSnippet.includes('%PDF-');
+    console.log("PDF Validation check result:", isValid);
+    return isValid;
+  }
   if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-    return header[0] === 0x50 && header[1] === 0x4b;
+    const isValid = header[0] === 0x50 && header[1] === 0x4b;
+    console.log("DOCX Validation check result:", isValid);
+    return isValid;
   }
   // Plain-text notes must not contain binary control bytes.
-  return !file.buffer.subarray(0, 1024).includes(0);
+  const isValidTxt = !file.buffer.subarray(0, 1024).includes(0);
+  console.log("TXT Validation check result:", isValidTxt);
+  return isValidTxt;
 };
 
 const validateUploadedFile = (req, res, next) => {
