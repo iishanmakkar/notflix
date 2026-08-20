@@ -276,6 +276,7 @@ export default function NotesPage() {
                                     </span>
                                 </div>
                             </div>
+                            </div>
 
                             <div className="flex gap-2 w-full mt-4">
                                 <Button
