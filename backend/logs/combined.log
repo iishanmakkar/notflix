@@ -1,0 +1,5 @@
+{"level":"info","message":"Notflix API listening on port 5000","service":"notflix-api","timestamp":"2026-08-20 11:39:33"}
+{"level":"info","message":"\u001b[0mGET / \u001b[32m200\u001b[0m 3.598 ms - 39\u001b[0m","service":"notflix-api","timestamp":"2026-08-20 11:39:57"}
+{"level":"info","message":"\u001b[0mGET /api/notes \u001b[31m500\u001b[0m 1600.939 ms - 33\u001b[0m","service":"notflix-api","timestamp":"2026-08-20 11:40:04"}
+{"level":"info","message":"Notflix API listening on port 5000","service":"notflix-api","timestamp":"2026-08-20 11:43:07"}
+{"level":"info","message":"\u001b[0mGET /api/notes \u001b[32m200\u001b[0m 1341.214 ms - 12\u001b[0m","service":"notflix-api","timestamp":"2026-08-20 11:43:19"}

@@ -1,13 +1,34 @@
-const Note = require("../models/Note");
+const { supabase } = require("../utils/supabaseClient");
 const cloudinary = require("cloudinary").v2;
 const axios = require("axios");
-const User = require("../models/User");
-const Notification = require("../models/Notification");
 const streamifier = require('streamifier');
 const cacheService = require('../utils/cache');
 
 const isOwnerOrAdmin = (note, user) =>
-  user.role === "admin" || String(note.uploadedBy?._id || note.uploadedBy) === String(user._id);
+  user.role === "admin" || String(note.uploadedBy?.id || note.uploadedBy?._id || note.uploadedBy) === String(user.id || user._id);
+
+const normalizeNote = (note) => {
+  if (!note) return null;
+  const n = {
+    ...note,
+    _id: note.id,
+    createdAt: note.createdAt || note.created_at,
+    updatedAt: note.updatedAt || note.updated_at
+  };
+  if (n.uploadedBy && typeof n.uploadedBy === 'object') {
+    n.uploadedBy = {
+      ...n.uploadedBy,
+      _id: n.uploadedBy.id
+    };
+  }
+  if (n.reviewedBy && typeof n.reviewedBy === 'object') {
+    n.reviewedBy = {
+      ...n.reviewedBy,
+      _id: n.reviewedBy.id
+    };
+  }
+  return n;
+};
 
 const getNoteById = async (req, res) => {
   try {
@@ -27,24 +48,37 @@ const getNoteById = async (req, res) => {
       });
     }
 
-    const note = await Note.findById(id).populate("uploadedBy", "name email");
+    const { data: note, error } = await supabase
+      .from("notes")
+      .select(`
+        *,
+        uploadedBy:users!notes_uploadedBy_fkey (
+          id,
+          name,
+          email
+        )
+      `)
+      .eq("id", id)
+      .single();
 
-    if (!note) {
+    if (error || !note) {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    if (note.status !== "approved" && !isOwnerOrAdmin(note, req.user)) {
+    const normNote = normalizeNote(note);
+
+    if (normNote.status !== "approved" && !isOwnerOrAdmin(normNote, req.user)) {
       return res.status(403).json({ error: "You do not have access to this note" });
     }
 
-    if (note.isPremium && (!req.user || (!req.user.isPremium && req.user.role !== "admin"))) {
+    if (normNote.isPremium && (!req.user || (!req.user.isPremium && req.user.role !== "admin"))) {
       return res.status(403).json({ error: "Premium subscription required to view this note" });
     }
 
     // Cache the note for future requests
-    await cacheService.cacheNote(id, note);
+    await cacheService.cacheNote(id, normNote);
 
-    res.status(200).json(note);
+    res.status(200).json(normNote);
   } catch (err) {
     console.error("GET NOTE ERROR >>>", err);
     res.status(500).json({ error: err.message || "Failed to fetch note" });
@@ -54,11 +88,7 @@ const getNoteById = async (req, res) => {
 const getAllNotes = async (req, res) => {
   try {
     const { subject } = req.query;
-    let filter = { status: 'approved' };
-    if (subject) {
-      filter.subject = subject.toLowerCase();
-    }
-
+    
     const cachedNotes = await cacheService.getCachedNotesList(subject);
     if (cachedNotes) {
       return res.status(200).json({
@@ -68,15 +98,33 @@ const getAllNotes = async (req, res) => {
       });
     }
 
-    const notes = await Note.find(filter)
-      .populate("uploadedBy", "name email")
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
+    let query = supabase
+      .from("notes")
+      .select(`
+        *,
+        uploadedBy:users!notes_uploadedBy_fkey (
+          id,
+          name,
+          email
+        )
+      `)
+      .eq("status", "approved");
 
-    await cacheService.cacheNotesList(subject, notes);
+    if (subject) {
+      query = query.eq("subject", subject.toLowerCase());
+    }
 
-    res.status(200).json({ notes });
+    const { data: notes, error } = await query
+      .order("createdAt", { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    const normNotes = (notes || []).map(normalizeNote);
+
+    await cacheService.cacheNotesList(subject, normNotes);
+
+    res.status(200).json({ notes: normNotes });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch notes" });
@@ -92,7 +140,7 @@ const uploadNote = async (req, res) => {
     });
 
     const { title, description, subject, isPremium } = req.body;
-    const uploadedBy = req.user._id;
+    const uploadedBy = req.user.id || req.user._id;
 
     // Basic validations
     if (!title || typeof title !== 'string' || title.trim().length < 3) {
@@ -128,7 +176,7 @@ const uploadNote = async (req, res) => {
     
     // Combine title and unique ID for the filename
     const publicId = `${cleanTitle}-${uniqueId}`;
-
+ 
     // Upload to Cloudinary using stream
     const uploadPromise = new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -152,9 +200,8 @@ const uploadNote = async (req, res) => {
     const cloudinaryResult = await uploadPromise;
     console.log("File uploaded to Cloudinary:", cloudinaryResult);
 
-    // Create new note - admin uploads are auto-approved, others go to pending review
     const isAdmin = req.user.role === 'admin';
-    const newNote = new Note({
+    const noteInsert = {
       title: title.trim(),
       content: description.trim(),
       subject: normalizedSubject,
@@ -164,42 +211,56 @@ const uploadNote = async (req, res) => {
       isPremium: isPremium === 'true',
       status: isAdmin ? 'approved' : 'pending',
       ...(isAdmin && {
-        reviewedAt: new Date(),
+        reviewedAt: new Date().toISOString(),
         reviewedBy: uploadedBy,
       }),
-    });
+    };
 
     // Save note to database
-    const savedNote = await newNote.save();
+    const { data: savedNote, error } = await supabase
+      .from("notes")
+      .insert(noteInsert)
+      .select(`
+        *,
+        uploadedBy:users!notes_uploadedBy_fkey (
+          id,
+          name,
+          email
+        )
+      `)
+      .single();
+
+    if (error) throw error;
     console.log("Note saved successfully:", savedNote);
 
-    // Update user's notes array
-    await User.findByIdAndUpdate(uploadedBy, {
-      $push: { notes: savedNote._id }
-    });
-    console.log("User's notes array updated");
+    const normSavedNote = normalizeNote(savedNote);
 
     // Only notify admins for pending (non-admin) uploads
     if (!isAdmin) {
-      const admins = await User.find({ role: "admin" }).select("_id");
-      if (admins.length) {
-        await Notification.insertMany(admins.map((admin) => ({
-          recipient: admin._id,
+      const { data: admins } = await supabase
+        .from("users")
+        .select("id")
+        .eq("role", "admin");
+
+      if (admins && admins.length) {
+        const notifs = admins.map((admin) => ({
+          recipient: admin.id,
           actor: uploadedBy,
           type: "note_submitted",
           title: "New note awaiting review",
-          message: `${req.user.name} uploaded “${savedNote.title}”.`,
+          message: `${req.user.name} uploaded “${normSavedNote.title}”.`,
           link: "/admin",
-        })));
+        }));
+        await supabase.from("notifications").insert(notifs);
       }
     }
 
     // Invalidate relevant caches
-    await cacheService.invalidateNoteCache(savedNote._id);
+    await cacheService.invalidateNoteCache(normSavedNote.id);
 
     res.status(201).json({ 
       message: isAdmin ? "Note uploaded and auto-approved" : "Note uploaded successfully", 
-      note: savedNote 
+      note: normSavedNote 
     });
 
   } catch (err) {
@@ -228,26 +289,33 @@ const updateNote = async (req, res) => {
     }
 
     if (description && typeof description === 'string' && description.trim().length >= 5) {
-      updateData.description = description.trim();
+      updateData.content = description.trim();
     }
 
     if (subject && typeof subject === 'string') {
       updateData.subject = subject.trim().toLowerCase();
     }
 
-    const existingNote = await Note.findById(id);
-    if (!existingNote) {
+    const { data: existingNote, error: fetchErr } = await supabase
+      .from("notes")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchErr || !existingNote) {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    if (!isOwnerOrAdmin(existingNote, req.user)) {
+    const normExistingNote = normalizeNote(existingNote);
+
+    if (!isOwnerOrAdmin(normExistingNote, req.user)) {
       return res.status(403).json({ error: "You can only update your own notes" });
     }
 
     // If a new file is uploaded, delete the old one and update
     if (req.file) {
-      if (existingNote.cloudinaryId) {
-        await cloudinary.uploader.destroy(existingNote.cloudinaryId);
+      if (normExistingNote.cloudinaryId) {
+        await cloudinary.uploader.destroy(normExistingNote.cloudinaryId);
       }
       const extension = req.file.originalname.split('.').pop();
       const uploadResult = await new Promise((resolve, reject) => {
@@ -261,18 +329,30 @@ const updateNote = async (req, res) => {
       updateData.cloudinaryId = uploadResult.public_id;
     }
 
-    const updatedNote = await Note.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    ).populate("uploadedBy", "name email");
+    const { data: updatedNote, error: updateErr } = await supabase
+      .from("notes")
+      .update(updateData)
+      .eq("id", id)
+      .select(`
+        *,
+        uploadedBy:users!notes_uploadedBy_fkey (
+          id,
+          name,
+          email
+        )
+      `)
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    const normUpdatedNote = normalizeNote(updatedNote);
 
     // Invalidate relevant caches
     await cacheService.invalidateNoteCache(id);
 
     res.status(200).json({
       message: "Note updated successfully",
-      note: updatedNote
+      note: normUpdatedNote
     });
   } catch (err) {
     console.error("UPDATE NOTE ERROR >>>", err);
@@ -284,28 +364,38 @@ const deleteNote = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const note = await Note.findById(id);
-    if (!note) {
+    const { data: note, error: fetchErr } = await supabase
+      .from("notes")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchErr || !note) {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    if (!isOwnerOrAdmin(note, req.user)) {
+    const normNote = normalizeNote(note);
+
+    if (!isOwnerOrAdmin(normNote, req.user)) {
       return res.status(403).json({ error: "You can only delete your own notes" });
     }
 
     // Fire-and-forget Cloudinary delete (non-blocking)
-    if (note.cloudinaryId) {
-      cloudinary.uploader.destroy(note.cloudinaryId).catch(err =>
+    if (normNote.cloudinaryId) {
+      cloudinary.uploader.destroy(normNote.cloudinaryId).catch(err =>
         console.warn('Cloudinary delete warning:', err.message)
       );
     }
 
-    // Run independent operations in parallel
-    await Promise.all([
-      User.findByIdAndUpdate(note.uploadedBy, { $pull: { notes: note._id } }),
-      Note.findByIdAndDelete(id),
-      cacheService.invalidateNoteCache(id),
-    ]);
+    // Delete note from database
+    const { error: deleteErr } = await supabase
+      .from("notes")
+      .delete()
+      .eq("id", id);
+
+    if (deleteErr) throw deleteErr;
+
+    await cacheService.invalidateNoteCache(id);
 
     res.status(200).json({ message: "Note deleted successfully" });
   } catch (err) {
@@ -316,11 +406,23 @@ const deleteNote = async (req, res) => {
 
 const getPendingNotes = async (req, res) => {
   try {
-    const notes = await Note.find({ status: 'pending' })
-      .populate("uploadedBy", "name email")
-      .sort({ createdAt: -1 })
-      .lean();
-    res.status(200).json(notes);
+    const { data: notes, error } = await supabase
+      .from("notes")
+      .select(`
+        *,
+        uploadedBy:users!notes_uploadedBy_fkey (
+          id,
+          name,
+          email
+        )
+      `)
+      .eq("status", "pending")
+      .order("createdAt", { ascending: false });
+
+    if (error) throw error;
+
+    const normNotes = (notes || []).map(normalizeNote);
+    res.status(200).json(normNotes);
   } catch (err) {
     console.error("GET PENDING NOTES ERROR >>>", err);
     res.status(500).json({ error: "Failed to fetch pending notes" });
@@ -338,31 +440,41 @@ const reviewNote = async (req, res) => {
 
     const trimmedComment = typeof reviewComment === "string" ? reviewComment.trim() : "";
 
-    const note = await Note.findByIdAndUpdate(
-      noteId,
-      {
+    const { data: note, error: updateErr } = await supabase
+      .from("notes")
+      .update({
         status,
         reviewComment: trimmedComment,
-        reviewedAt: new Date(),
-        reviewedBy: req.user._id,
-      },
-      { new: true }
-    ).populate("uploadedBy", "name email");
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: req.user.id || req.user._id,
+      })
+      .eq("id", noteId)
+      .select(`
+        *,
+        uploadedBy:users!notes_uploadedBy_fkey (
+          id,
+          name,
+          email
+        )
+      `)
+      .single();
 
-    if (!note) {
+    if (updateErr || !note) {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    // Run notification creation and cache invalidation in parallel
+    const normNote = normalizeNote(note);
+
+    // Create notification and invalidate cache in parallel
     await Promise.all([
-      Notification.create({
-        recipient: note.uploadedBy,
-        actor: req.user._id,
+      supabase.from("notifications").insert({
+        recipient: normNote.uploadedBy.id || normNote.uploadedBy._id || normNote.uploadedBy,
+        actor: req.user.id || req.user._id,
         type: status === "approved" ? "note_approved" : "note_rejected",
         title: status === "approved" ? "Your note was approved" : "Your note was rejected",
         message: status === "approved"
-          ? `Your note “${note.title}” is now available to students.`
-          : `Your note “${note.title}” was not approved.${trimmedComment ? ` Feedback: ${trimmedComment}` : ""}`,
+          ? `Your note “${normNote.title}” is now available to students.`
+          : `Your note “${normNote.title}” was not approved.${trimmedComment ? ` Feedback: ${trimmedComment}` : ""}`,
         link: "/notes",
       }),
       cacheService.invalidateNoteCache(noteId),
@@ -370,7 +482,7 @@ const reviewNote = async (req, res) => {
 
     res.status(200).json({
       message: `Note ${status} successfully`,
-      note: note
+      note: normNote
     });
   } catch (err) {
     console.error("REVIEW NOTE ERROR >>>", err);
@@ -384,34 +496,45 @@ const getAllNotesAdmin = async (req, res) => {
     const pageNumber = Math.max(1, Number.parseInt(page, 10) || 1);
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 10));
     
-    let filter = {};
+    let query = supabase
+      .from("notes")
+      .select(`
+        *,
+        uploadedBy:users!notes_uploadedBy_fkey (
+          id,
+          name,
+          email
+        ),
+        reviewedBy:users!notes_reviewedBy_fkey (
+          id,
+          name
+        )
+      `, { count: "exact" });
     
     if (status) {
-      filter.status = status;
+      query = query.eq("status", status);
     }
     
     if (subject) {
-      filter.subject = subject.toLowerCase();
+      query = query.eq("subject", subject.toLowerCase());
     }
 
     const skip = (pageNumber - 1) * pageSize;
-    
-    const notes = await Note.find(filter)
-      .populate("uploadedBy", "name email")
-      .populate("reviewedBy", "name")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(pageSize);
+    const { data: notes, count: total, error } = await query
+      .order("createdAt", { ascending: false })
+      .range(skip, skip + pageSize - 1);
 
-    const total = await Note.countDocuments(filter);
+    if (error) throw error;
+
+    const normNotes = (notes || []).map(normalizeNote);
 
     res.status(200).json({
-      notes,
+      notes: normNotes,
       pagination: {
         currentPage: pageNumber,
-        totalPages: Math.ceil(total / pageSize),
-        totalNotes: total,
-        hasNext: pageNumber * pageSize < total,
+        totalPages: Math.ceil((total || 0) / pageSize),
+        totalNotes: total || 0,
+        hasNext: pageNumber * pageSize < (total || 0),
         hasPrev: pageNumber > 1
       }
     });
@@ -424,7 +547,8 @@ const getAllNotesAdmin = async (req, res) => {
 const incrementViews = async (req, res) => {
   try {
     const { id } = req.params;
-    await Note.findByIdAndUpdate(id, { $inc: { views: 1 } });
+    const { error } = await supabase.rpc("increment_views", { note_id: id });
+    if (error) throw error;
     await cacheService.invalidateNoteCache(id);
     res.status(200).json({ message: "View counted" });
   } catch (err) {
@@ -437,27 +561,34 @@ const downloadNote = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const note = await Note.findById(id);
-    if (!note) {
+    const { data: note, error: fetchErr } = await supabase
+      .from("notes")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchErr || !note) {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    if (note.status !== "approved") {
+    const normNote = normalizeNote(note);
+
+    if (normNote.status !== "approved") {
       return res.status(403).json({ error: "This note is not yet available for download" });
     }
 
-    if (note.isPremium && (!req.user || !req.user.isPremium && req.user?.role !== "admin")) {
+    if (normNote.isPremium && (!req.user || !req.user.isPremium && req.user?.role !== "admin")) {
       return res.status(403).json({ error: "Premium access required" });
     }
 
     try {
-      await Note.findByIdAndUpdate(id, { $inc: { downloads: 1 } });
+      await supabase.rpc("increment_downloads", { note_id: id });
       await cacheService.invalidateNoteCache(id);
     } catch (_err) {
       console.warn('Failed to increment download count');
     }
 
-    return res.redirect(note.fileUrl);
+    return res.redirect(normNote.fileUrl);
   } catch (err) {
     console.error("DOWNLOAD NOTE ERROR >>>", err);
     res.status(500).json({ error: "Failed to download note" });

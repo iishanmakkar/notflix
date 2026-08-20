@@ -1,4 +1,4 @@
-const requiredInProduction = ["MONGO_URI", "REDIS_URL", "JWT_SECRET", "SESSION_SECRET", "FRONTEND_URL"];
+const requiredInProduction = ["SUPABASE_URL", "SUPABASE_ANON_KEY", "REDIS_URL", "JWT_SECRET", "SESSION_SECRET", "FRONTEND_URL"];
 
 function validateEnvironment() {
   if (process.env.NODE_ENV !== "production") return;

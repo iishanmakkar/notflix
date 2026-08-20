@@ -6,7 +6,7 @@ const { rateLimits } = require("../middlewares/rateLimit");
 const router = express.Router();
 const passport = require("passport");
 require("../passport/google");
-const User = require("../models/User");
+const { updateUser } = require("../utils/db");
 const tokenStore = require("../utils/tokenStore");
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcryptjs");
@@ -63,111 +63,10 @@ router.post("/logout", rateLimits.auth, async (req, res) => {
 router.get("/me", authMiddleware, getCurrentUser);
 
 // Login route
-router.post("/login", rateLimits.auth, async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Validate input
-    if (!email || !password) {
-      return res.status(400).json({ message: "Please provide email and password" });
-    }
-
-    // Find user
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // Generate token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // Send response
-    const userResponse = {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isPremium: user.isPremium,
-      profileImage: user.profileImage || ''
-    };
-
-    res.json({
-      token,
-      user: userResponse
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Server error during login" });
-  }
-});
+router.post("/login", rateLimits.auth, login);
 
 // Register route
-router.post("/register", rateLimits.auth, async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-
-    // Validate input
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Please provide all required fields" });
-    }
-
-    if (typeof name !== "string" || name.trim().length < 2 || typeof email !== "string" ||
-      !/^\S+@\S+\.\S+$/.test(email) || typeof password !== "string" || password.length < 8) {
-      return res.status(400).json({ message: "Provide a valid name, email, and password of at least 8 characters" });
-    }
-
-    // Check if user exists
-    const normalizedEmail = email.trim().toLowerCase();
-    const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
-    }
-
-    // Create user (password will be hashed by the pre-save middleware)
-    const user = new User({
-      name: name.trim(),
-      email: normalizedEmail,
-      password,
-      role: "user" // Default role
-    });
-
-    await user.save();
-    // Generate token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // Send response
-    const userResponse = {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isPremium: user.isPremium,
-      profileImage: user.profileImage || ''
-    };
-
-    res.status(201).json({
-      token,
-      user: userResponse
-    });
-  } catch (error) {
-    console.error("Registration error:", error);
-    res.status(500).json({ message: "Server error during registration" });
-  }
-});
+router.post("/register", rateLimits.auth, register);
 
 // Update user premium status
 router.patch("/update-premium", rateLimits.admin, authMiddleware, adminMiddleware, async (req, res) => {
@@ -188,11 +87,7 @@ router.patch("/update-premium", rateLimits.admin, authMiddleware, adminMiddlewar
       return res.status(400).json({ message: "isPremium must be a boolean" });
     }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { isPremium: isPremium },
-      { new: true }
-    );
+    const user = await updateUser(userId, { isPremium: isPremium });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });

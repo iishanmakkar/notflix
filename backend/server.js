@@ -1,5 +1,8 @@
 require("dotenv").config();
 
+const dns = require("dns");
+dns.setServers(["8.8.8.8", "1.1.1.1"]); // Workaround for Windows MongoDB SRV ECONNREFUSED issues
+
 const compression = require("compression");
 const cors = require("cors");
 const express = require("express");
@@ -18,8 +21,7 @@ const redisClient = require("./config/redis");
 const cacheService = require("./utils/cache");
 const logger = require("./utils/logger");
 require("./utils/cloudinary");
-const Message = require("./models/chatModel");
-const connectDB = require("./config/db");
+const { supabase } = require("./utils/supabaseClient");
 // const User = require("./models/User"); // User model now via Supabase
 const { authMiddleware } = require("./middlewares/authMiddleware");
 const { findUserById } = require("./utils/db");
@@ -160,10 +162,17 @@ io.on("connection", (socket) => {
     if (!validRooms.has(room)) return socket.emit("error", "Invalid chat room");
     try {
       socket.join(room);
-      const messages = await Message.find({ room })
-        .sort({ timestamp: 1 })
+      const { data: messages, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("room", room)
+        .order("timestamp", { ascending: true })
         .limit(50);
-      socket.emit("room_messages", messages);
+
+      if (error) throw error;
+
+      const normMessages = (messages || []).map(msg => ({ ...msg, _id: msg.id }));
+      socket.emit("room_messages", normMessages);
     } catch (_error) {
       socket.emit("error", "Failed to join room");
     }
@@ -176,15 +185,23 @@ io.on("connection", (socket) => {
     }
 
     try {
-      const message = await Message.create({
-        content,
-        room: messageData.room,
-        sender: socket.user._id,
-        senderName: socket.user.name,
-        isAdmin: socket.user.role === "admin",
-      });
+      const { data: message, error } = await supabase
+        .from("messages")
+        .insert({
+          content,
+          room: messageData.room,
+          sender: socket.user.id || socket.user._id,
+          senderName: socket.user.name,
+          isAdmin: socket.user.role === "admin",
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const normMessage = { ...message, _id: message.id };
       await cacheService.invalidateChatCache(messageData.room);
-      io.to(messageData.room).emit("receive_message", message);
+      io.to(messageData.room).emit("receive_message", normMessage);
     } catch (_error) {
       socket.emit("error", "Failed to send message");
     }
@@ -202,7 +219,6 @@ app.use((err, _req, res, _next) => {
 
 let server;
 async function start() {
-  await connectDB();
   await redisClient.connect();
   // Start listening on the port provided by Railway or fallback to 5000
   server = httpServer.listen(PORT, () => logger.info(`Notflix API listening on port ${PORT}`));

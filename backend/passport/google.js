@@ -1,6 +1,6 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const User = require("../models/User");
+const { findUserByEmail, createUser, findUserById, updateUser } = require("../utils/db");
 const isGoogleAuthConfigured = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
 if (isGoogleAuthConfigured) passport.use(
@@ -13,17 +13,15 @@ if (isGoogleAuthConfigured) passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         // Find existing user by email
-        let user = await User.findOne({ email: profile.emails[0].value });
+        let user = await findUserByEmail(profile.emails[0].value);
 
         if (!user) {
           // Create new user if doesn't exist
-          user = new User({
+          user = await createUser({
             name: profile.displayName,
             email: profile.emails[0].value,
-            password: "GoogleOAuth", // Dummy password
-            role: "user" // Default role for new users
+            password: "GoogleOAuth" // Dummy password
           });
-          await user.save();
           console.log('Created new user via Google auth:', {
             email: user.email,
             role: user.role
@@ -31,8 +29,7 @@ if (isGoogleAuthConfigured) passport.use(
         } else {
           // Update existing user's name if changed
           if (user.name !== profile.displayName) {
-            user.name = profile.displayName;
-            await user.save();
+            user = await updateUser(user._id || user.id, { name: profile.displayName });
           }
           console.log('Found existing user via Google auth:', {
             email: user.email,
@@ -50,13 +47,13 @@ if (isGoogleAuthConfigured) passport.use(
 );
 
 passport.serializeUser((user, done) => {
-  done(null, user.id);
+  done(null, user._id || user.id);
 });
 
 passport.deserializeUser(async (id, done) => {
   try {
-  const user = await User.findById(id);
-  done(null, user);
+    const user = await findUserById(id);
+    done(null, user);
   } catch (err) {
     done(err, null);
   }
