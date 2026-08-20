@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, CheckCircle, XCircle, Clock, FileText, User, Shield, Trash2, Edit } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, Clock, FileText, User, Shield, Trash2, Edit, Crown } from 'lucide-react';
 import RateLimitMonitor from '../components/RateLimitMonitor';
 import { useAuth } from '../context/AuthContext';
 
