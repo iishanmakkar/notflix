@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { FiLock } from "react-icons/fi";
-import SocialLoginButtons from "./SocialSignupButtons";
 import { useAuth } from "../context/AuthContext";
 
 const SignupPage = () => {
@@ -50,13 +49,7 @@ const SignupPage = () => {
         <div className="neo-card w-full max-w-[400px] p-8">
           <h3 className="text-2xl font-bold text-center mb-6">Create an Account</h3>
 
-          <SocialLoginButtons />
 
-          <div className="flex items-center mb-6">
-            <hr className="flex-1 border-t border-gray-300" />
-            <span className="px-3 text-gray-400">- OR -</span>
-            <hr className="flex-1 border-t border-gray-300" />
-          </div>
 
           <form className="space-y-6" onSubmit={handleSignup}>
             <input
