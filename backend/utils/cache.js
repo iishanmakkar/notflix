@@ -201,12 +201,32 @@ class CacheService {
   // Cache warming methods
   async warmNotesCache() {
     try {
-      const Note = require('../models/Note');
-      const notes = await Note.find({ status: 'approved' })
-        .populate('uploadedBy', 'name email')
-        .limit(100); // Cache first 100 approved notes
-      
-      await this.cacheNotesList(null, notes);
+      const { supabase } = require('./supabaseClient');
+      const { data: notes, error } = await supabase
+        .from('notes')
+        .select(`
+          *,
+          uploadedBy:users!notes_uploadedBy_fkey (
+            id,
+            name,
+            email
+          )
+        `)
+        .eq('status', 'approved')
+        .order('createdAt', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      const normNotes = (notes || []).map(note => {
+        const n = { ...note, _id: note.id };
+        if (n.uploadedBy && typeof n.uploadedBy === 'object') {
+          n.uploadedBy = { ...n.uploadedBy, _id: n.uploadedBy.id };
+        }
+        return n;
+      });
+
+      await this.cacheNotesList(null, normNotes);
       console.log('✅ Notes cache warmed');
     } catch (error) {
       console.error('❌ Failed to warm notes cache:', error);

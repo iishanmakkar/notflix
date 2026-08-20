@@ -4,7 +4,7 @@ const Razorpay = require('razorpay');
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const { rateLimits } = require('../middlewares/rateLimit');
 const tokenStore = require('../utils/tokenStore');
-const User = require('../models/User');
+const { updateUser } = require('../utils/db');
 const router = express.Router();
 
 const PREMIUM_AMOUNT = Number.parseInt(process.env.PREMIUM_PLAN_AMOUNT || '19900', 10);
@@ -73,8 +73,7 @@ router.post('/verify', rateLimits.auth, authMiddleware, async (req, res, next) =
       return res.status(400).json({ error: 'Payment signature verification failed' });
     }
 
-    const user = await User.findByIdAndUpdate(req.user._id, { isPremium: true }, { new: true })
-      .select('_id name email role isPremium');
+    const user = await updateUser(req.user._id, { isPremium: true });
     await tokenStore.setEx(`payment:verified:${paymentId}`, 7 * 24 * 60 * 60, String(req.user._id));
     return res.json({ message: 'Premium activated', user });
   } catch (error) {
