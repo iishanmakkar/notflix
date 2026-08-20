@@ -1,18 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const Message = require('../models/chatModel');
+const { supabase } = require('../utils/supabaseClient');
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const { adminMiddleware } = require('../middlewares/adminMiddleware');
 
 // Get messages for a specific room (public)
 router.get('/messages/:room', async (req, res) => {
   try {
-    const messages = await Message.find({ room: req.params.room })
-      .sort({ timestamp: 1 })
-      .lean();
+    const { data: messages, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("room", req.params.room)
+      .order("timestamp", { ascending: true });
 
-    const formattedMessages = messages.map((message) => ({
-      _id: message._id,
+    if (error) throw error;
+
+    const formattedMessages = (messages || []).map((message) => ({
+      _id: message.id,
       sender: String(message.sender),
       senderName: message.senderName,
       content: message.content,
@@ -31,13 +35,22 @@ router.get('/messages/:room', async (req, res) => {
 // Delete a message (admin only)
 router.delete('/messages/:messageId', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const message = await Message.findById(req.params.messageId);
+    const { data: message, error: fetchErr } = await supabase
+      .from("messages")
+      .select("id")
+      .eq("id", req.params.messageId)
+      .single();
     
-    if (!message) {
+    if (fetchErr || !message) {
       return res.status(404).json({ message: 'Message not found' });
     }
 
-    await message.deleteOne();
+    const { error: deleteErr } = await supabase
+      .from("messages")
+      .delete()
+      .eq("id", req.params.messageId);
+
+    if (deleteErr) throw deleteErr;
     res.json({ message: 'Message deleted successfully' });
   } catch (error) {
     console.error('Error deleting message:', error);
