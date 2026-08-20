@@ -240,11 +240,11 @@ const OCRComponent = () => {
         setError(null);
 
         const formData = new FormData();
-        formData.append('image', selectedFile);
         formData.append('language', selectedLanguage);
+        formData.append('image', selectedFile);
 
         try {
-            const response = await axios.post(`${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/ocr/process`, formData, {
+            const response = await axios.post(`${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/ocr/process?language=${selectedLanguage}`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
