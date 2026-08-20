@@ -183,6 +183,14 @@ export default function AdminDashboard() {
                                                     >
                                                         Cancel
                                                     </Button>
+                                                    {note.fileUrl && (
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => window.open(note.fileUrl, '_blank')}
+                                                        >
+                                                            View Document
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         variant="destructive"
                                                         size="sm"
@@ -201,6 +209,14 @@ export default function AdminDashboard() {
                                                 >
                                                     Review Note
                                                 </Button>
+                                                {note.fileUrl && (
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => window.open(note.fileUrl, '_blank')}
+                                                    >
+                                                        View Document
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="destructive"
                                                     size="sm"
@@ -271,15 +287,25 @@ export default function AdminDashboard() {
                                                 <p>Reviewed: {new Date(note.reviewedAt).toLocaleDateString()}</p>
                                             )}
                                         </div>
-                                        <Button
-                                            variant="destructive"
-                                            size="sm"
-                                            className="mt-4"
-                                            onClick={() => handleDelete(note._id)}
-                                        >
-                                            <Trash2 className="w-4 h-4 mr-1" />
-                                            Delete
-                                        </Button>
+                                        <div className="flex gap-2 mt-4">
+                                            {note.fileUrl && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => window.open(note.fileUrl, '_blank')}
+                                                >
+                                                    View Document
+                                                </Button>
+                                            )}
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => handleDelete(note._id)}
+                                            >
+                                                <Trash2 className="w-4 h-4 mr-1" />
+                                                Delete
+                                            </Button>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             ))}
