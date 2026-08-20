@@ -66,17 +66,9 @@ class CacheService {
     try {
       if (!redisClient.isReady()) return false;
       const client = redisClient.getClient();
-      let cursor = 0;
-      const keysToDelete = [];
-
-      do {
-        const reply = await client.scan(cursor, { MATCH: pattern, COUNT: 100 });
-        cursor = reply.cursor;
-        keysToDelete.push(...reply.keys);
-      } while (cursor !== 0);
-
-      if (keysToDelete.length > 0) {
-        await client.del(keysToDelete);
+      const keys = await client.keys(pattern);
+      if (keys && keys.length > 0) {
+        await client.del(keys);
       }
       return true;
     } catch (error) {
