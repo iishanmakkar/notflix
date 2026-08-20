@@ -300,6 +300,7 @@ export default function NotesPage() {
                                     href={note.isPremium && !user?.isPremium ? undefined : `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/notes/${note._id}/download${token ? `?token=${token}` : ''}`}
                                     target={note.isPremium && !user?.isPremium ? undefined : "_blank"}
                                     rel="noopener noreferrer"
+                                    className="flex-1"
                                     onClick={(e) => {
                                         if (note.isPremium && !user?.isPremium && user?.role !== 'admin') {
                                             e.preventDefault();
@@ -307,11 +308,17 @@ export default function NotesPage() {
                                             window.scrollTo(0, 0);
                                         } else {
                                             trackUserAction.downloadNote(note._id, note.title, note.subject);
+                                            // Increment local state download counter for immediate UI feedback
+                                            setNotes(prevNotes => prevNotes.map(n => 
+                                                n._id === note._id 
+                                                    ? { ...n, downloads: (n.downloads || 0) + 1 }
+                                                    : n
+                                            ));
                                         }
                                     }}
                                 >
                                     <Button
-                                        className={`border-2 border-black transition-all duration-300 shadow-sm ${
+                                        className={`w-full border-2 border-black transition-all duration-300 shadow-sm ${
                                             note.isPremium 
                                                 ? "bg-[#b7c6c2] text-black hover:bg-[#a3b5b0] hover:shadow-[3px_3px_0_#000]" 
                                                 : "bg-white text-black hover:bg-[#9AC9DE] hover:text-black hover:shadow-[3px_3px_0_#000]"
