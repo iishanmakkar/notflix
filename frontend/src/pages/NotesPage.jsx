@@ -33,7 +33,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { trackUserAction } from "../utils/analytics";
 
 export default function NotesPage() {
-    const { api, user } = useAuth();
+    const { api, user, token } = useAuth();
     const [notes, setNotes] = useState([]);
     const [loadError, setLoadError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
@@ -297,7 +297,7 @@ export default function NotesPage() {
                                     View
                                 </Button>
                                 <a
-                                    href={note.isPremium && !user?.isPremium ? undefined : `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/notes/${note._id}/download`}
+                                    href={note.isPremium && !user?.isPremium ? undefined : `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api/notes/${note._id}/download${token ? `?token=${token}` : ''}`}
                                     target={note.isPremium && !user?.isPremium ? undefined : "_blank"}
                                     rel="noopener noreferrer"
                                     onClick={(e) => {

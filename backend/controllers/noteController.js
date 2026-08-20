@@ -561,6 +561,22 @@ const downloadNote = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const token = req.query.token;
+    if (token) {
+      try {
+        const jwt = require("jsonwebtoken");
+        const { findUserById } = require("../utils/db");
+        
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await findUserById(decoded.userId);
+        if (user) {
+          req.user = user;
+        }
+      } catch (err) {
+        console.warn("Download token verification failed:", err.message);
+      }
+    }
+
     const { data: note, error: fetchErr } = await supabase
       .from("notes")
       .select("*")
