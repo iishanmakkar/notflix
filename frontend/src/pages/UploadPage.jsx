@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
-import { Upload, FileText, Star, CheckCircle, AlertCircle, Info } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "react-hot-toast";
+import { Upload, FileText, Star, CheckCircle, AlertCircle, Info } from "lucide-react";
 
 const UploadPage = () => {
   const navigate = useNavigate();
@@ -89,7 +90,7 @@ const UploadPage = () => {
 
       if (response.data) {
         const isAdmin = user?.role === 'admin';
-        alert(isAdmin ? "Note uploaded and auto-approved!" : "Notes uploaded successfully! Waiting for admin review.");
+        toast.success(isAdmin ? "Note uploaded and auto-approved!" : "Notes uploaded successfully! Waiting for admin review.");
         navigate("/");
       }
     } catch (err) {

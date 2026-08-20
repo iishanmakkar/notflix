@@ -10,6 +10,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Star, Send, Edit, Trash2, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 export default function ReviewSection({ noteId, initialRating, initialReviewCount }) {
     const { user, token } = useAuth();
@@ -92,7 +93,7 @@ export default function ReviewSection({ noteId, initialRating, initialReviewCoun
             fetchStats();
         } catch (err) {
             console.error('Failed to submit review', err);
-            alert(err.response?.data?.error || 'Failed to submit review');
+            toast.error(err.response?.data?.error || 'Failed to submit review');
         } finally {
             setSubmitting(false);
         }
@@ -114,7 +115,7 @@ export default function ReviewSection({ noteId, initialRating, initialReviewCoun
             fetchReviews(1);
             fetchStats();
         } catch {
-            alert('Failed to delete review');
+            toast.error('Failed to delete review');
         }
     };
 
