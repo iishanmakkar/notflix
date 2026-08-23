@@ -54,3 +54,11 @@ Thumbs.db
 **/google-credentials*.json
 **/config/google-credentials.json
 .superdesign
+
+# Agents & Claude skills
+.agents/skills/
+.claude/skills/superdesign/
+
+# Temp PDFs
+tmp/pdfs/
+
