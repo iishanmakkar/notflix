@@ -14,22 +14,13 @@ export default function Footer() {
             { label: 'Community Chat', href: '/chat' },
         ],
         Company: [
-            { label: 'About Us', href: '/about' },
             { label: 'Contact', href: '/contact-us' },
-            { label: 'Careers', href: '/careers' },
-            { label: 'Blog', href: '/blog' },
         ],
         Legal: [
             { label: 'Privacy Policy', href: '/privacy-policy' },
             { label: 'Terms & Conditions', href: '/terms-and-conditions' },
             { label: 'Cancellation & Refund', href: '/cancellation-and-refund' },
             { label: 'Shipping & Delivery', href: '/shipping-and-delivery' },
-        ],
-        Support: [
-            { label: 'Help Center', href: '/help' },
-            { label: 'FAQs', href: '/faqs' },
-            { label: 'Report Issue', href: '/report' },
-            { label: 'Feedback', href: '/feedback' },
         ],
     };
 

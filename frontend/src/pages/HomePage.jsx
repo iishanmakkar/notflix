@@ -59,11 +59,6 @@ export default function HomePage() {
       ) : (
         <Link to="/signup" className="neo-btn mt-10 inline-flex items-center gap-2 bg-black px-8 py-5 text-lg text-white">JOIN NOTFLIX <Crown size={20}/></Link>
       )}</section>
-      <footer className="grid gap-10 bg-[#171e19] px-6 py-16 text-white md:grid-cols-4 md:px-12"><div><div className="font-display text-3xl text-[#b7c6c2]">NOTFLIX</div><p className="mt-4 font-bold text-[#b7c6c2]">The study platform that refuses to be boring.</p></div><div><b className="text-[#b7c6c2]">PLATFORM</b><div className="mt-4 grid gap-2 font-bold"><Link to="/notes">Notes</Link><Link to="/chat">Chat</Link><Link to="/ocr">OCR</Link></div></div><div><b className="text-[#b7c6c2]">ACCOUNT</b>{user ? (
-        <div className="mt-4 grid gap-2 font-bold"><Link to="/upload">Upload</Link><Link to="/premium">Premium</Link></div>
-      ) : (
-        <div className="mt-4 grid gap-2 font-bold"><Link to="/login">Login</Link><Link to="/signup">Create account</Link><Link to="/premium">Premium</Link></div>
-      )}</div><div><b className="text-[#b7c6c2]">SUPPORT</b><div className="mt-4 grid gap-2 font-bold"><Link to="/contact-us">Contact</Link><Link to="/privacy-policy">Privacy</Link><Link to="/terms-and-conditions">Terms</Link></div></div></footer>
     </main>
   );
 }
