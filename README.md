@@ -19,7 +19,7 @@ Notflix is a MERN-stack study-material platform where students can discover, upl
 | Area | Technologies |
 | --- | --- |
 | Frontend | React 18, Vite, React Router, Axios, Context API |
-| Styling/UI | Tailwind CSS, Radix UI, Lucide React, Framer Motion, React Hot Toast / Toastify |
+| Styling/UI | Tailwind CSS, Radix UI, Lucide React, Framer Motion, React Hot Toast  |
 | Backend | Node.js, Express 5 |
 | Database | MongoDB with Mongoose |
 | Authentication | JSON Web Tokens (JWT), bcrypt/bcryptjs, Passport, Google OAuth 2.0, Express Session |
